@@ -25,7 +25,7 @@ dependencies {
 	}
 }
 
-group = 'com.tileman'
+group = 'com.houseman'
 version = '1.0-SNAPSHOT'
 sourceCompatibility = '1.11'
 

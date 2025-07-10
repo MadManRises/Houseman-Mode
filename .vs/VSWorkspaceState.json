@@ -1,0 +1,17 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\main",
+    "\\src\\main\\java",
+    "\\src\\main\\java\\com",
+    "\\src\\main\\java\\com\\houseman",
+    "\\src\\main\\resources",
+    "\\src\\test",
+    "\\src\\test\\java",
+    "\\src\\test\\java\\com",
+    "\\src\\test\\java\\com\\houseman"
+  ],
+  "SelectedNode": "\\src\\main\\java\\com\\houseman\\TilemanModeWorldMapOverlay.java",
+  "PreviewInSolutionExplorer": false
+}
