@@ -80,3 +80,34 @@ layout(std430, binding = 5) readonly buffer texturebuffer_in {
 layout(std430, binding = 6) readonly buffer temptexturebuffer_in {
   vec4 temptexb[];
 };
+
+layout(std430, binding = 7) readonly buffer visitedbuffer_in {
+  ivec4 offset;
+  uvec2 visited[];
+};
+
+uint isVisited(uint x, uint y){
+    uint bit = x % 32;
+    uint component = (x / 32) % 2;
+    uint row = y % 64;
+
+    uint plane = 0;
+    const uint planeSize = 64;
+
+    uint regionIndex = 3 * (y / 64) + (x / 64);
+    const uint regionSize = 4 * 64;
+
+    return (visited[regionIndex * regionSize + plane * planeSize + row][component] >> bit) & 1;
+}
+
+int modifyAhsl(int hsl, vec3 pos){
+    uint x = uint((pos.x + 64) / 128) + uint(offset.x) % 64;
+    uint y = uint((pos.z + 64) / 128) + uint(offset.y) % 64;
+
+    uint bright = isVisited(x - 1, y - 1)
+                    | isVisited(x, y - 1)
+                    | isVisited(x - 1, y)
+                    | isVisited(x, y);
+
+    return (hsl / 128) * 128 + max((hsl % 128) / (9 - int(bright) * 8), 1);
+}

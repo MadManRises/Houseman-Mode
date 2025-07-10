@@ -15,11 +15,13 @@ import java.util.List;
 public class HousemanRangeOverlay extends Overlay {
     private final Client client;
     private final HousemanModePlugin plugin;
+    private final HousemanModeConfig config;
 
     @Inject
-    public HousemanRangeOverlay(Client client, HousemanModePlugin plugin) {
+    public HousemanRangeOverlay(Client client, HousemanModePlugin plugin, HousemanModeConfig config) {
         this.client = client;
         this.plugin = plugin;
+        this.config = config;
         setPosition(OverlayPosition.DYNAMIC);
         setPriority(Overlay.PRIORITY_LOW);
         setLayer(OverlayLayer.ABOVE_SCENE);
@@ -28,11 +30,14 @@ public class HousemanRangeOverlay extends Overlay {
     @Override
     public Dimension render(Graphics2D graphics) {
 
-        List<Integer> borders = plugin.getCurrentBorder();
+        if (config.renderBordersInGame()) {
 
-        if (borders != null){
-            for (Integer point : borders){
-                drawTile(graphics, point, Color.RED);
+            List<Integer> borders = plugin.getCurrentBorder();
+
+            if (borders != null) {
+                for (Integer point : borders) {
+                    drawTile(graphics, point, Color.RED);
+                }
             }
         }
 

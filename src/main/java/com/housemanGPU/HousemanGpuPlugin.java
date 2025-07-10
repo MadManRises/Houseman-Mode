@@ -84,6 +84,7 @@ import org.lwjgl.opengl.GLCapabilities;
 import org.lwjgl.opengl.GLUtil;
 import org.lwjgl.system.Callback;
 import org.lwjgl.system.Configuration;
+import shortestpath.pathfinder.SplitFlagMap;
 import shortestpath.pathfinder.VisitedTiles;
 
 @PluginDescriptor(
@@ -193,9 +194,9 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 
 	private final GLBuffer sceneVertexBuffer = new GLBuffer("scene vertex buffer");
 	private final GLBuffer sceneUvBuffer = new GLBuffer("scene tex buffer");
-	private final GLBuffer sceneVisitedBuffer = new GLBuffer("scene visited buffer");
 	private final GLBuffer tmpVertexBuffer = new GLBuffer("tmp vertex buffer");
 	private final GLBuffer tmpUvBuffer = new GLBuffer("tmp tex buffer");
+	private final GLBuffer tmpVisitedBuffer = new GLBuffer("tmp visited buffer");
 	private final GLBuffer tmpModelBufferLarge = new GLBuffer("model buffer large");
 	private final GLBuffer tmpModelBufferSmall = new GLBuffer("model buffer small");
 	private final GLBuffer tmpModelBufferUnordered = new GLBuffer("model buffer unordered");
@@ -377,7 +378,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 
 				vertexBuffer = new GpuIntBuffer();
 				uvBuffer = new GpuFloatBuffer();
-				visitedBuffer = new GpuIntBuffer();
+				visitedBuffer = new GpuLongBuffer();
 
 				modelBufferUnordered = new GpuIntBuffer();
 				modelBufferSmall = new GpuIntBuffer();
@@ -777,9 +778,9 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 	{
 		initGlBuffer(sceneVertexBuffer);
 		initGlBuffer(sceneUvBuffer);
-		initGlBuffer(sceneVisitedBuffer);
 		initGlBuffer(tmpVertexBuffer);
 		initGlBuffer(tmpUvBuffer);
+		initGlBuffer(tmpVisitedBuffer);
 		initGlBuffer(tmpModelBufferLarge);
 		initGlBuffer(tmpModelBufferSmall);
 		initGlBuffer(tmpModelBufferUnordered);
@@ -796,10 +797,10 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 	{
 		destroyGlBuffer(sceneVertexBuffer);
 		destroyGlBuffer(sceneUvBuffer);
-		destroyGlBuffer(sceneVisitedBuffer);
 
 		destroyGlBuffer(tmpVertexBuffer);
 		destroyGlBuffer(tmpUvBuffer);
+		destroyGlBuffer(tmpVisitedBuffer);
 		destroyGlBuffer(tmpModelBufferLarge);
 		destroyGlBuffer(tmpModelBufferSmall);
 		destroyGlBuffer(tmpModelBufferUnordered);
@@ -949,26 +950,28 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 		uniformBuf.clear();
 
 		visitedBuffer.clear();
-		visitedBuffer.ensureCapacity(3 * 3 * 64 * 4);
+		visitedBuffer.ensureCapacity(3 * 3 * 64 * 4 + 2);
 		LongBuffer visitedBuf = visitedBuffer.getBuffer();
+		int xOffset = scene.getBaseX();
+		int yOffset = scene.getBaseY();
+		visitedBuf.put((((long) yOffset) << 32) + xOffset);
+		visitedBuf.put(0);
 		if (tiles != null){
-			for (int x = 0; x < 3; ++x){
-				for (int y = 0; y < 3; ++y){
-					int pos = visitedBuf.position();
+			for (int y = 0; y < 3; ++y){
+				for (int x = 0; x < 3; ++x){
+
 					VisitedTiles.VisitedRegion region = tiles.getRegion(scene.getBaseX() + 64 * x, scene.getBaseY() + 64 * y);
+					int written = 0;
 					if (region != null) {
 						visitedBuf.put(region.data());
+						written = region.data().length;
 					}
-					visitedBuf.position(pos + 4 * 64);
+					for (; written < 4 * 64; ++written){
+						visitedBuf.put(0);
+					}
 				}
 			}
 		}
-		updateBuffer(sceneVisitedBuffer, GL43C.GL_UNIFORM_BUFFER, visitedBuf, GL43C.GL_DYNAMIC_DRAW, CL12.CL_MEM_READ_ONLY);
-		GL43C.glBindBuffer(GL43C.GL_UNIFORM_BUFFER, 1);
-
-		GL43C.glBindBufferBase(GL43C.GL_UNIFORM_BUFFER, 1, sceneVisitedBuffer.glBufferId);
-		uniformBuf.clear();
-
 
 		checkGLErrors();
 	}
@@ -981,12 +984,15 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 			// Upload buffers
 			vertexBuffer.flip();
 			uvBuffer.flip();
+			visitedBuffer.flip();
 
 			IntBuffer vertexBuffer = this.vertexBuffer.getBuffer();
 			FloatBuffer uvBuffer = this.uvBuffer.getBuffer();
+			LongBuffer visitedBuffer = this.visitedBuffer.getBuffer();
 
 			updateBuffer(tmpVertexBuffer, GL43C.GL_ARRAY_BUFFER, vertexBuffer, GL43C.GL_DYNAMIC_DRAW, 0L);
 			updateBuffer(tmpUvBuffer, GL43C.GL_ARRAY_BUFFER, uvBuffer, GL43C.GL_DYNAMIC_DRAW, 0L);
+			updateBuffer(tmpVisitedBuffer, GL43C.GL_UNIFORM_BUFFER, visitedBuffer, GL43C.GL_DYNAMIC_DRAW, 0L);
 
 			checkGLErrors();
 			return;
@@ -998,16 +1004,19 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 		modelBuffer.flip();
 		modelBufferSmall.flip();
 		modelBufferUnordered.flip();
+		visitedBuffer.flip();
 
 		IntBuffer vertexBuffer = this.vertexBuffer.getBuffer();
 		FloatBuffer uvBuffer = this.uvBuffer.getBuffer();
 		IntBuffer modelBuffer = this.modelBuffer.getBuffer();
 		IntBuffer modelBufferSmall = this.modelBufferSmall.getBuffer();
 		IntBuffer modelBufferUnordered = this.modelBufferUnordered.getBuffer();
+		LongBuffer visitedBuffer = this.visitedBuffer.getBuffer();
 
 		// temp buffers
 		updateBuffer(tmpVertexBuffer, GL43C.GL_ARRAY_BUFFER, vertexBuffer, GL43C.GL_DYNAMIC_DRAW, CL12.CL_MEM_READ_ONLY);
 		updateBuffer(tmpUvBuffer, GL43C.GL_ARRAY_BUFFER, uvBuffer, GL43C.GL_DYNAMIC_DRAW, CL12.CL_MEM_READ_ONLY);
+		updateBuffer(tmpVisitedBuffer, GL43C.GL_UNIFORM_BUFFER, visitedBuffer, GL43C.GL_DYNAMIC_DRAW, CL12.CL_MEM_READ_ONLY);
 
 		// model buffers
 		updateBuffer(tmpModelBufferLarge, GL43C.GL_ARRAY_BUFFER, modelBuffer, GL43C.GL_DYNAMIC_DRAW, CL12.CL_MEM_READ_ONLY);
@@ -1064,6 +1073,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBuffer.glBufferId);
 		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 5, sceneUvBuffer.glBufferId);
 		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBuffer.glBufferId);
+		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 7, tmpVisitedBuffer.glBufferId);
 
 		GL43C.glDispatchCompute(unorderedModels, 1, 1);
 
@@ -1077,6 +1087,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBuffer.glBufferId);
 		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 5, sceneUvBuffer.glBufferId);
 		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBuffer.glBufferId);
+		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 7, tmpVisitedBuffer.glBufferId);
 
 		GL43C.glDispatchCompute(smallModels, 1, 1);
 
@@ -1090,6 +1101,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBuffer.glBufferId);
 		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 5, sceneUvBuffer.glBufferId);
 		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBuffer.glBufferId);
+		GL43C.glBindBufferBase(GL43C.GL_SHADER_STORAGE_BUFFER, 7, tmpVisitedBuffer.glBufferId);
 
 		GL43C.glDispatchCompute(largeModels, 1, 1);
 

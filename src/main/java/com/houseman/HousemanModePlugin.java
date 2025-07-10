@@ -81,7 +81,7 @@ public class HousemanModePlugin extends Plugin {
     private KeyManager keyManager;
 
     @Inject
-    private Client client;
+    Client client;
 
     @Inject
     private Gson gson;

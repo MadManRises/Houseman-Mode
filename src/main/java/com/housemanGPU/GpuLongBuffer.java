@@ -63,7 +63,7 @@ class GpuLongBuffer
 			}
 			while ((capacity - position) < size);
 
-			IntBuffer newB = allocateDirect(capacity);
+			LongBuffer newB = allocateDirect(capacity);
 			buffer.flip();
 			newB.put(buffer);
 			buffer = newB;

@@ -29,10 +29,6 @@
 
 layout(local_size_x = 6) in;
 
-int modifyAhsl(int hsl, vec3 pos){
-    return (hsl / 128) * 128 + (int(pos.z) / 128) - 90;
-}
-
 void main() {
   uint groupId = gl_WorkGroupID.x;
   uint localId = gl_LocalInvocationID.x;
@@ -71,9 +67,9 @@ void main() {
   vec3 vertC = thisC.pos + pos;
 
   // position vertices in scene and write to out buffer
-  vout[outOffset + myOffset * 3] = vert(vertA, modifyAhsl(thisA.ahsl, pos));
-  vout[outOffset + myOffset * 3 + 1] = vert(vertB, modifyAhsl(thisB.ahsl, pos));
-  vout[outOffset + myOffset * 3 + 2] = vert(vertC, modifyAhsl(thisC.ahsl, pos));
+  vout[outOffset + myOffset * 3] = vert(vertA, modifyAhsl(thisA.ahsl, vertA));
+  vout[outOffset + myOffset * 3 + 1] = vert(vertB, modifyAhsl(thisB.ahsl, vertB));
+  vout[outOffset + myOffset * 3 + 2] = vert(vertC, modifyAhsl(thisC.ahsl, vertC));
 
   if (toffset < 0) {
     uvout[outOffset + myOffset * 3] = vec4(0);

@@ -274,9 +274,9 @@ void sort_and_insert(uint localId, modelinfo minfo, int thisPriority, int thisDi
     vertC = hillskew_vertexf(vertC, hillskew, minfo.y, plane);
 
     // write to out buffer
-    vout[outOffset + myOffset * 3] = vert(vertA.xyz, thisrvA.ahsl);
-    vout[outOffset + myOffset * 3 + 1] = vert(vertB.xyz, thisrvB.ahsl);
-    vout[outOffset + myOffset * 3 + 2] = vert(vertC.xyz, thisrvC.ahsl);
+    vout[outOffset + myOffset * 3] = vert(vertA.xyz, modifyAhsl(thisrvA.ahsl, vertA.xyz));
+    vout[outOffset + myOffset * 3 + 1] = vert(vertB.xyz, modifyAhsl(thisrvB.ahsl, vertB.xyz));
+    vout[outOffset + myOffset * 3 + 2] = vert(vertC.xyz, modifyAhsl(thisrvC.ahsl, vertC.xyz));
 
     if (toffset < 0) {
       uvout[outOffset + myOffset * 3] = vec4(0);

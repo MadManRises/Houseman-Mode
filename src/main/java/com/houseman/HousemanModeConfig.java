@@ -78,5 +78,14 @@ public interface HousemanModeConfig extends ShortestPathConfig {
         return 20;
     }
 
-
+    @ConfigItem(
+            keyName = "renderBordersInGame",
+            name = "Render debug border tiles in game",
+            section = settingsSection,
+            description = "Turns on debug border tile rendering in the game view.",
+            position = 4
+    )
+    default boolean renderBordersInGame() {
+        return false;
+    }
 }
