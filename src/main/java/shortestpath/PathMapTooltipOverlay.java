@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+
+import com.houseman.HousemanModePlugin;
 import net.runelite.api.Client;
 import net.runelite.api.Point;
 import net.runelite.api.widgets.ComponentID;
@@ -27,10 +29,10 @@ public class PathMapTooltipOverlay extends Overlay {
     private static final int TOOLTIP_TEXT_OFFSET_HEIGHT = -2;
 
     private final Client client;
-    private final ShortestPathPlugin plugin;
+    private final HousemanModePlugin plugin;
 
     @Inject
-    private PathMapTooltipOverlay(Client client, ShortestPathPlugin plugin) {
+    private PathMapTooltipOverlay(Client client, HousemanModePlugin plugin) {
         this.client = client;
         this.plugin = plugin;
         setPosition(OverlayPosition.DYNAMIC);
@@ -41,7 +43,7 @@ public class PathMapTooltipOverlay extends Overlay {
 
     @Override
     public Dimension render(Graphics2D graphics) {
-        if (!plugin.drawMap || client.getWidget(ComponentID.WORLD_MAP_MAPVIEW) == null) {
+        if (!plugin.config.drawMap() || client.getWidget(ComponentID.WORLD_MAP_MAPVIEW) == null) {
             return null;
         }
 

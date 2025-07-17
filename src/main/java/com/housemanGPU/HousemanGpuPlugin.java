@@ -42,21 +42,7 @@ import javax.swing.SwingUtilities;
 
 import com.houseman.HousemanModePlugin;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.BufferProvider;
-import net.runelite.api.Client;
-import net.runelite.api.Constants;
-import net.runelite.api.GameState;
-import net.runelite.api.IntProjection;
-import net.runelite.api.Model;
-import net.runelite.api.Perspective;
-import net.runelite.api.Projection;
-import net.runelite.api.Renderable;
-import net.runelite.api.Scene;
-import net.runelite.api.SceneTileModel;
-import net.runelite.api.SceneTilePaint;
-import net.runelite.api.Texture;
-import net.runelite.api.TextureProvider;
-import net.runelite.api.TileObject;
+import net.runelite.api.*;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.hooks.DrawCallbacks;
 import net.runelite.client.callback.ClientThread;
@@ -86,6 +72,9 @@ import org.lwjgl.system.Callback;
 import org.lwjgl.system.Configuration;
 import shortestpath.pathfinder.SplitFlagMap;
 import shortestpath.pathfinder.VisitedTiles;
+
+import static net.runelite.api.Constants.SCENE_SIZE;
+import static net.runelite.api.Constants.TILE_FLAG_BRIDGE;
 
 @PluginDescriptor(
 	name = "Houseman GPU",
@@ -285,6 +274,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 	private boolean lwjglInitted = false;
 
 	VisitedTiles tiles;
+	int remainingTiles;
 
 	private int sceneId;
 	private int nextSceneId;
@@ -564,6 +554,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 		if (HousemanModePlugin.PLUGIN_MESSAGE_UPDATE.equals(action)) {
 			Map<String, Object> data = event.getData();
 			tiles = (VisitedTiles) data.getOrDefault(HousemanModePlugin.PLUGIN_MESSAGE_VISITED_TILES, null);
+			remainingTiles = (int) data.getOrDefault(HousemanModePlugin.PLUGIN_MESSAGE_REMAINING_TILES, null);
 		}
 	}
 
@@ -955,7 +946,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 		int xOffset = scene.getBaseX();
 		int yOffset = scene.getBaseY();
 		visitedBuf.put((((long) yOffset) << 32) + xOffset);
-		visitedBuf.put(0);
+		visitedBuf.put(plane);
 		if (tiles != null){
 			for (int y = 0; y < 3; ++y){
 				for (int x = 0; x < 3; ++x){
@@ -967,7 +958,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 						written = region.data().length;
 					}
 					for (; written < 4 * 64; ++written){
-						visitedBuf.put(0);
+						visitedBuf.put(scene.isInstance() && remainingTiles > 0 ? -1 : 0);
 					}
 				}
 			}
@@ -1127,6 +1118,8 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 			final int localY = 0;
 			final int localZ = tileY << Perspective.LOCAL_COORD_BITS;
 
+			boolean isBridge = tileX >= 0 && tileY >= 0 && tileX < SCENE_SIZE && tileY < SCENE_SIZE && (client.getTileSettings()[1][tileX][tileY] & TILE_FLAG_BRIDGE) == TILE_FLAG_BRIDGE;
+
 			GpuIntBuffer b = modelBufferUnordered;
 			++unorderedModels;
 
@@ -1136,7 +1129,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 			buffer.put(paint.getUvBufferOffset());
 			buffer.put(2);
 			buffer.put(targetBufferOffset);
-			buffer.put(FLAG_SCENE_BUFFER);
+			buffer.put(FLAG_SCENE_BUFFER | (isBridge ? (1 << 27) : 0) | (plane << 24));
 			buffer.put(localX).put(localY).put(localZ);
 
 			targetBufferOffset += 2 * 3;
@@ -1159,6 +1152,19 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 			final int localY = 0;
 			final int localZ = tileY << Perspective.LOCAL_COORD_BITS;
 
+			boolean inBounds = tileX >= 0 && tileY >= 0 && tileX < SCENE_SIZE && tileY < SCENE_SIZE;
+			boolean isBridge = inBounds && (client.getTileSettings()[1][tileX][tileY] & TILE_FLAG_BRIDGE) == TILE_FLAG_BRIDGE;
+
+			int plane = 0;
+			if (inBounds) {
+				for (plane = 3; plane > 0; --plane) {
+					Tile tile = scene.getTiles()[plane][tileX][tileY];
+					if (tile != null && tile.getSceneTileModel() == model)
+						break;
+				}
+			}
+
+
 			GpuIntBuffer b = modelBufferUnordered;
 			++unorderedModels;
 
@@ -1168,7 +1174,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 			buffer.put(model.getUvBufferOffset());
 			buffer.put(model.getBufferLen() / 3);
 			buffer.put(targetBufferOffset);
-			buffer.put(FLAG_SCENE_BUFFER);
+			buffer.put(FLAG_SCENE_BUFFER | (isBridge ? (1 << 27) : 0) | (plane << 24));
 			buffer.put(localX).put(localY).put(localZ);
 
 			targetBufferOffset += model.getBufferLen();
@@ -1825,17 +1831,14 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 				vertexBuffer, uvBuffer);
 		}
 		// Model may be in the scene buffer
-		else if (offsetModel.getSceneId() == sceneId)
-		{
+		else if (offsetModel.getSceneId() == sceneId) {
 			assert model == renderable;
 
 			model.calculateBoundsCylinder();
 
-			if (projection instanceof IntProjection)
-			{
+			if (projection instanceof IntProjection) {
 				IntProjection p = (IntProjection) projection;
-				if (!isVisible(model, p.getPitchSin(), p.getPitchCos(), p.getYawSin(), p.getYawCos(), x - p.getCameraX(), y - p.getCameraY(), z - p.getCameraZ()))
-				{
+				if (!isVisible(model, p.getPitchSin(), p.getPitchCos(), p.getYawSin(), p.getYawCos(), x - p.getCameraX(), y - p.getCameraY(), z - p.getCameraZ())) {
 					return;
 				}
 			}
@@ -1847,6 +1850,11 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 			int plane = (int) ((hash >> TileObject.HASH_PLANE_SHIFT) & 3);
 			boolean hillskew = offsetModel != model;
 
+			int tileX = (int) (hash & 127);
+			int tileY = (int) ((hash >> 7) & 127);
+			boolean isBridge = tileX < SCENE_SIZE && tileY < SCENE_SIZE && (client.getTileSettings()[1][tileX][tileY] & TILE_FLAG_BRIDGE) == TILE_FLAG_BRIDGE;
+
+
 			GpuIntBuffer b = bufferForTriangles(tc);
 
 			b.ensureCapacity(8);
@@ -1855,7 +1863,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 			buffer.put(uvOffset);
 			buffer.put(tc);
 			buffer.put(targetBufferOffset);
-			buffer.put(FLAG_SCENE_BUFFER | (hillskew ? (1 << 26) : 0) | (plane << 24) | orientation);
+			buffer.put(FLAG_SCENE_BUFFER | (isBridge ? (1 << 27) : 0) | (hillskew ? (1 << 26) : 0) | (plane << 24) | orientation);
 			buffer.put(x).put(y).put(z);
 
 			targetBufferOffset += tc * 3;
@@ -1884,6 +1892,11 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 			client.checkClickbox(projection, model, orientation, x, y, z, hash);
 
 			boolean hasUv = model.getFaceTextures() != null;
+			int plane = (int) ((hash >> TileObject.HASH_PLANE_SHIFT) & 3);
+
+			int tileX = (x - 64) / 128;
+			int tileY = (z - 64) / 128;
+			boolean isBridge = tileX >= 0 && tileY >= 0 && tileX < SCENE_SIZE && tileY < SCENE_SIZE && (client.getTileSettings()[1][tileX][tileY] & TILE_FLAG_BRIDGE) == TILE_FLAG_BRIDGE;
 
 			int len = sceneUploader.pushModel(model, vertexBuffer, uvBuffer);
 
@@ -1895,7 +1908,7 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 			buffer.put(hasUv ? tempUvOffset : -1);
 			buffer.put(len / 3);
 			buffer.put(targetBufferOffset);
-			buffer.put(orientation);
+			buffer.put((isBridge ? (1 << 27) : 0) | (plane << 24) | orientation);
 			buffer.put(x).put(y).put(z);
 
 			tempOffset += len;

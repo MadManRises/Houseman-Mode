@@ -7,6 +7,8 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.util.List;
+
+import com.houseman.HousemanModePlugin;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
@@ -17,10 +19,10 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 
 public class PathMinimapOverlay extends Overlay {
     private final Client client;
-    private final ShortestPathPlugin plugin;
+    private final HousemanModePlugin plugin;
 
     @Inject
-    private PathMinimapOverlay(Client client, ShortestPathPlugin plugin) {
+    private PathMinimapOverlay(Client client, HousemanModePlugin plugin) {
         this.client = client;
         this.plugin = plugin;
         setPosition(OverlayPosition.DYNAMIC);
@@ -30,7 +32,7 @@ public class PathMinimapOverlay extends Overlay {
 
     @Override
     public Dimension render(Graphics2D graphics) {
-        if (!plugin.drawMinimap || plugin.getPathfinder() == null) {
+        if (!plugin.config.drawMinimap() || plugin.getPathfinder() == null) {
             return null;
         }
 
@@ -43,7 +45,7 @@ public class PathMinimapOverlay extends Overlay {
         graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 
         List<Integer> pathPoints = plugin.getPathfinder().getPath();
-        Color pathColor = plugin.getPathfinder().isDone() ? plugin.colourPath : plugin.colourPathCalculating;
+        Color pathColor = plugin.getPathfinder().isDone() ? plugin.config.colourPath() : plugin.config.colourPathCalculating();
         for (int pathPoint : pathPoints) {
             if (WorldPointUtil.unpackWorldPlane(pathPoint) != client.getPlane()) {
                 continue;
@@ -53,7 +55,7 @@ public class PathMinimapOverlay extends Overlay {
         }
         for (int target : plugin.getPathfinder().getTargets()) {
             if (pathPoints.size() > 0 && target != pathPoints.get(pathPoints.size() - 1)) {
-                drawOnMinimap(graphics, target, plugin.colourPathCalculating);
+                drawOnMinimap(graphics, target, plugin.config.colourPathCalculating());
             }
         }
 

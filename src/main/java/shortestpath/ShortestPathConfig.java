@@ -1,6 +1,8 @@
 package shortestpath;
 
 import java.awt.Color;
+
+import com.chanceman.ChanceManConfig;
 import net.runelite.client.config.Alpha;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
@@ -11,9 +13,9 @@ import net.runelite.client.config.Units;
 import shortestpath.pathfinder.PathfinderConfig;
 
 @ConfigGroup("housemanMode")
-public interface ShortestPathConfig extends Config {
+public interface ShortestPathConfig extends ChanceManConfig {
     @ConfigSection(
-        name = "Settings",
+        name = "Shortest Path - Settings",
         description = "Options for the pathfinding",
         position = 0
     )

@@ -1,12 +1,7 @@
 package shortestpath.pathfinder;
 
-import java.util.ArrayDeque;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
+
 import lombok.Getter;
 import shortestpath.WorldPointUtil;
 
@@ -19,6 +14,8 @@ public class Pathfinder implements Runnable {
     private final int start;
     @Getter
     private final Set<Integer> targets;
+    @Getter
+    private final Set<Integer> transportIDs;
 
     private final PathfinderConfig config;
     private final CollisionMap map;
@@ -32,6 +29,7 @@ public class Pathfinder implements Runnable {
 
     @SuppressWarnings("unchecked") // Casting EMPTY_LIST is safe here
     private List<Integer> path = (List<Integer>)Collections.EMPTY_LIST;
+    private List<Integer> ids = (List<Integer>)Collections.EMPTY_LIST;
     private boolean pathNeedsUpdate = false;
     private Node bestLastNode;
     /**
@@ -53,6 +51,7 @@ public class Pathfinder implements Runnable {
         visited = new VisitedTiles(map);
         targetInWilderness = PathfinderConfig.isInWilderness(targets);
         wildernessLevel = 31;
+        this.transportIDs = new HashSet<>();
     }
 
     public boolean isDone() {
@@ -80,10 +79,26 @@ public class Pathfinder implements Runnable {
 
         if (pathNeedsUpdate) {
             path = lastNode.getPath();
+            ids = lastNode.getObjectIDs();
             pathNeedsUpdate = false;
         }
 
         return path;
+    }
+
+    public List<Integer> getObjectIDs() {
+        Node lastNode = bestLastNode; // For thread safety, read bestLastNode once
+        if (lastNode == null) {
+            return path;
+        }
+
+        if (pathNeedsUpdate) {
+            path = lastNode.getPath();
+            ids = lastNode.getObjectIDs();
+            pathNeedsUpdate = false;
+        }
+
+        return ids;
     }
 
     private void addNeighbors(Node node) {

@@ -38,9 +38,45 @@ public interface HousemanModeConfig extends ShortestPathConfig {
     @ConfigSection(
             name = "Settings",
             description = "Settings'",
-            position = 2
+            position = 0
     )
     String settingsSection = "settings";
+
+    @ConfigSection(
+            name = "Shortest Path - Settings",
+            description = "Options for the pathfinding",
+            position = 1
+    )
+    String shortestPathSettings = "sectionSettings";
+
+    @ConfigSection(
+            name = "Chance Man - Settings",
+            description = "Chance Man - Settings'",
+            position = 2
+    )
+    String chancemanSection = "chancemansettings";
+
+    @ConfigSection(
+            name = "Display",
+            description = "Options for displaying the path on the world map, minimap and scene tiles",
+            position = 3
+    )
+    String sectionDisplay = "sectionDisplay";
+
+    @ConfigSection(
+            name = "Colours",
+            description = "Colours for the path map, minimap and scene tiles",
+            position = 4
+    )
+    String sectionColours = "sectionColours";
+
+    @ConfigSection(
+            name = "Debug Options",
+            description = "Various options for debugging",
+            position = 5,
+            closedByDefault = true
+    )
+    String sectionDebug = "sectionDebug";
 
     @Range(
             min = Integer.MIN_VALUE
@@ -86,6 +122,28 @@ public interface HousemanModeConfig extends ShortestPathConfig {
             position = 4
     )
     default boolean renderBordersInGame() {
+        return false;
+    }
+
+    @ConfigItem(
+            keyName = "renderBordersInMap",
+            name = "Render debug border tiles in map",
+            section = settingsSection,
+            description = "Turns on debug border tile rendering in the world map.",
+            position = 4
+    )
+    default boolean renderBordersInMap() {
+        return false;
+    }
+
+    @ConfigItem(
+            keyName = "renderBordersInMinimap",
+            name = "Render debug border tiles in minimap",
+            section = settingsSection,
+            description = "Turns on debug border tile rendering in the mini map.",
+            position = 4
+    )
+    default boolean renderBordersInMinimap() {
         return false;
     }
 }

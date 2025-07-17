@@ -9,6 +9,8 @@ import java.awt.Rectangle;
 import java.awt.geom.Area;
 import java.util.HashSet;
 import java.util.List;
+
+import com.houseman.HousemanModePlugin;
 import net.runelite.api.Client;
 import net.runelite.api.Point;
 import net.runelite.api.widgets.ComponentID;
@@ -20,10 +22,10 @@ import shortestpath.pathfinder.CollisionMap;
 
 public class PathMapOverlay extends Overlay {
     private final Client client;
-    private final ShortestPathPlugin plugin;
+    private final HousemanModePlugin plugin;
 
     @Inject
-    private PathMapOverlay(Client client, ShortestPathPlugin plugin) {
+    private PathMapOverlay(Client client, HousemanModePlugin plugin) {
         this.client = client;
         this.plugin = plugin;
         setPosition(OverlayPosition.DYNAMIC);
@@ -34,7 +36,7 @@ public class PathMapOverlay extends Overlay {
 
     @Override
     public Dimension render(Graphics2D graphics) {
-        if (!plugin.drawMap) {
+        if (!plugin.config.drawMap()) {
             return null;
         }
 
@@ -46,8 +48,8 @@ public class PathMapOverlay extends Overlay {
         Area worldMapClipArea = getWorldMapClipArea(worldMapRectangle);
         graphics.setClip(worldMapClipArea);
 
-        if (plugin.drawCollisionMap) {
-            graphics.setColor(plugin.colourCollisionMap);
+        if (plugin.config.drawCollisionMap()) {
+            graphics.setColor(plugin.config.colourCollisionMap());
             int mapWorldPoint = plugin.calculateMapPoint(worldMapRectangle.x, worldMapRectangle.y);
             int extentX = WorldPointUtil.unpackWorldX(mapWorldPoint);
             int extentY = WorldPointUtil.unpackWorldY(mapWorldPoint);
@@ -64,7 +66,7 @@ public class PathMapOverlay extends Overlay {
             }
         }
 
-        if (plugin.drawTransports) {
+        if (plugin.config.drawTransports()) {
             graphics.setColor(Color.WHITE);
             for (int a : plugin.getTransports().keySet()) {
                 if (a == Transport.UNDEFINED_ORIGIN) {
@@ -94,7 +96,7 @@ public class PathMapOverlay extends Overlay {
         }
 
         if (plugin.getPathfinder() != null) {
-            Color colour = plugin.getPathfinder().isDone() ? plugin.colourPath : plugin.colourPathCalculating;
+            Color colour = plugin.getPathfinder().isDone() ? plugin.config.colourPath() : plugin.config.colourPathCalculating();
             List<Integer> path = plugin.getPathfinder().getPath();
             Point cursorPos = client.getMouseCanvasPosition();
             for (int i = 0; i < path.size(); i++) {
@@ -108,7 +110,7 @@ public class PathMapOverlay extends Overlay {
             }
             for (int target : plugin.getPathfinder().getTargets()) {
                 if (path.size() > 0 && target != path.get(path.size() - 1)) {
-                    graphics.setColor(plugin.colourPathCalculating);
+                    graphics.setColor(plugin.config.colourPathCalculating());
                     drawOnMap(graphics, target, true, cursorPos);
                 }
             }

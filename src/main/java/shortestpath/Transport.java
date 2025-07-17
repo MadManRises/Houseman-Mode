@@ -55,6 +55,9 @@ public class Transport {
     @Getter
     private int duration;
 
+    @Getter
+    private int objectID;
+
     /** Info to display for this transport. For spirit trees, fairy rings,
      * and others, this is the destination option to pick. */
     @Getter
@@ -135,6 +138,14 @@ public class Transport {
                 Integer.parseInt(destinationArray[0]),
                 Integer.parseInt(destinationArray[1]),
                 Integer.parseInt(destinationArray[2])) : LOCATION_PERMUTATION;
+        }
+
+        if ((value = fieldMap.get("menuOption menuTarget objectID")) != null) {
+            String[] originArray = value.split(DELIM_SPACE);
+            try {
+                objectID = Integer.parseInt(originArray[2]);
+            }catch(NumberFormatException e) {}
+            catch (ArrayIndexOutOfBoundsException e) {}
         }
 
         if ((value = fieldMap.get("Skills")) != null) {
@@ -443,4 +454,5 @@ public class Transport {
         addTransports(transports, "/shortestpath/transports/wilderness_obelisks.tsv", TransportType.WILDERNESS_OBELISK);
         return transports;
     }
+
 }

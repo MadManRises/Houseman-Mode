@@ -11,6 +11,8 @@ import java.awt.geom.Rectangle2D;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+
+import com.houseman.HousemanModePlugin;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
@@ -23,11 +25,11 @@ import shortestpath.pathfinder.CollisionMap;
 
 public class PathTileOverlay extends Overlay {
     private final Client client;
-    private final ShortestPathPlugin plugin;
+    private final HousemanModePlugin plugin;
     private static final int TRANSPORT_LABEL_GAP = 3;
 
     @Inject
-    public PathTileOverlay(Client client, ShortestPathPlugin plugin) {
+    public PathTileOverlay(Client client, HousemanModePlugin plugin) {
         this.client = client;
         this.plugin = plugin;
         setPosition(OverlayPosition.DYNAMIC);
@@ -74,7 +76,7 @@ public class PathTileOverlay extends Overlay {
             }
 
             if (drawStart) {
-                drawTile(graphics, a, plugin.colourTransports, -1, true);
+                drawTile(graphics, a, plugin.config.colourTransports(), -1, true);
             }
 
             graphics.setColor(Color.WHITE);
@@ -107,7 +109,7 @@ public class PathTileOverlay extends Overlay {
                         (!map.w(x, y, z) ? "w" : "");
 
                 if (map.isBlocked(x, y, z)) {
-                    graphics.setColor(plugin.colourCollisionMap);
+                    graphics.setColor(plugin.config.colourCollisionMap());
                     graphics.fill(tilePolygon);
                 }
                 if (!s.isEmpty() && !s.equals("nsew")) {
@@ -122,37 +124,37 @@ public class PathTileOverlay extends Overlay {
 
     @Override
     public Dimension render(Graphics2D graphics) {
-        if (plugin.drawTransports) {
+        if (plugin.config.drawTransports()) {
             renderTransports(graphics);
         }
 
-        if (plugin.drawCollisionMap) {
+        if (plugin.config.drawCollisionMap()) {
             renderCollisionMap(graphics);
         }
 
-        if (plugin.drawTiles && plugin.getPathfinder() != null && plugin.getPathfinder().getPath() != null) {
+        if (plugin.config.drawTiles() && plugin.getPathfinder() != null && plugin.getPathfinder().getPath() != null) {
             Color colorCalculating = new Color(
-                plugin.colourPathCalculating.getRed(),
-                plugin.colourPathCalculating.getGreen(),
-                plugin.colourPathCalculating.getBlue(),
-                plugin.colourPathCalculating.getAlpha() / 2);
+                plugin.config.colourPathCalculating().getRed(),
+                plugin.config.colourPathCalculating().getGreen(),
+                plugin.config.colourPathCalculating().getBlue(),
+                plugin.config.colourPathCalculating().getAlpha() / 2);
             Color color = plugin.getPathfinder().isDone()
                 ? new Color(
-                    plugin.colourPath.getRed(),
-                    plugin.colourPath.getGreen(),
-                    plugin.colourPath.getBlue(),
-                    plugin.colourPath.getAlpha() / 2)
+                    plugin.config.colourPath().getRed(),
+                    plugin.config.colourPath().getGreen(),
+                    plugin.config.colourPath().getBlue(),
+                    plugin.config.colourPath().getAlpha() / 2)
                 : colorCalculating;
 
             List<Integer> path = plugin.getPathfinder().getPath();
             int counter = 0;
-            if (TileStyle.LINES.equals(plugin.pathStyle)) {
+            if (TileStyle.LINES.equals(plugin.config.pathStyle())) {
                 for (int i = 1; i < path.size(); i++) {
                     drawLine(graphics, path.get(i - 1), path.get(i), color, 1 + counter++);
                     drawTransportInfo(graphics, path.get(i - 1), path.get(i));
                 }
             } else {
-                boolean showTiles = TileStyle.TILES.equals(plugin.pathStyle);
+                boolean showTiles = TileStyle.TILES.equals(plugin.config.pathStyle());
                 for (int i = 0; i < path.size(); i++) {
                     drawTile(graphics, path.get(i), color, counter++, showTiles);
                     drawTransportInfo(graphics, path.get(i), (i + 1 == path.size()) ? WorldPointUtil.UNDEFINED : path.get(i + 1));
@@ -267,20 +269,20 @@ public class PathTileOverlay extends Overlay {
     }
 
     private void drawCounter(Graphics2D graphics, double x, double y, int counter) {
-        if (counter >= 0 && !TileCounter.DISABLED.equals(plugin.showTileCounter)) {
-            int n = plugin.tileCounterStep > 0 ? plugin.tileCounterStep : 1;
+        if (counter >= 0 && !TileCounter.DISABLED.equals(plugin.config.showTileCounter())) {
+            int n = plugin.config.tileCounterStep() > 0 ? plugin.config.tileCounterStep() : 1;
             int s = plugin.getPathfinder().getPath().size();
             if ((counter % n != 0) && (s != (counter + 1))) {
                 return;
             }
-            if (TileCounter.REMAINING.equals(plugin.showTileCounter)) {
+            if (TileCounter.REMAINING.equals(plugin.config.showTileCounter())) {
                 counter = s - counter - 1;
             }
             if (n > 1 && counter == 0) {
                 return;
             }
             String counterText = Integer.toString(counter);
-            graphics.setColor(plugin.colourText);
+            graphics.setColor(plugin.config.colourText());
             graphics.drawString(
                 counterText,
                 (int) (x - graphics.getFontMetrics().getStringBounds(counterText, graphics).getWidth() / 2), (int) y);
@@ -288,7 +290,7 @@ public class PathTileOverlay extends Overlay {
     }
 
     private void drawTransportInfo(Graphics2D graphics, int location, int locationEnd) {
-        if (locationEnd == WorldPointUtil.UNDEFINED || !plugin.showTransportInfo) {
+        if (locationEnd == WorldPointUtil.UNDEFINED || !plugin.config.showTransportInfo()) {
             return;
         }
         for (int point : WorldPointUtil.toLocalInstance(client, location)) {
@@ -325,7 +327,7 @@ public class PathTileOverlay extends Overlay {
                     int y = (int) (p.getY() - height) - (vertical_offset);
                     graphics.setColor(Color.BLACK);
                     graphics.drawString(text, x + 1, y + 1);
-                    graphics.setColor(plugin.colourText);
+                    graphics.setColor(plugin.config.colourText());
                     graphics.drawString(text, x, y);
 
                     vertical_offset += (int) height + TRANSPORT_LABEL_GAP;

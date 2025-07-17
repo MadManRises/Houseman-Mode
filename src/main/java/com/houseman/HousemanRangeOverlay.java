@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -39,6 +40,17 @@ public class HousemanRangeOverlay extends Overlay {
                     drawTile(graphics, point, Color.RED);
                 }
             }
+        }
+
+        if (plugin.getRemainingTiles() < 0 && plugin.hasItemsToDrop()){
+            graphics.setFont(graphics.getFont().deriveFont(Font.BOLD, 100.0f));
+            graphics.setColor(Color.RED);
+            Dimension bounds = graphics.getClipBounds().getSize();
+            float width = (float)(graphics.getFont().getStringBounds("Your items are", graphics.getFontRenderContext()).getWidth());
+            graphics.drawString("Your items are", (bounds.width - width) / 2, bounds.height / 2 - 150.0f);
+            width = (float)( graphics.getFont().getStringBounds("holding you down", graphics.getFontRenderContext()).getWidth());
+
+            graphics.drawString("holding you down", (bounds.width - width) / 2, bounds.height / 2 + 150.0f);
         }
 
         return null;

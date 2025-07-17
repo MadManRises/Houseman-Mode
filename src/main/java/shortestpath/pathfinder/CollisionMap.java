@@ -87,7 +87,7 @@ public class CollisionMap {
         // Thus any transports in the list are guaranteed to be valid per the user's settings
         for (Transport transport : transports) {
             if (visited.get(transport.getDestination())) continue;
-            neighbors.add(new TransportNode(transport.getDestination(), node, transport.getDuration()));
+            neighbors.add(new TransportNode(transport.getDestination(), node, transport.getDuration(), transport.getObjectID()));
         }
 
         if (isBlocked(x, y, z)) {
@@ -130,11 +130,16 @@ public class CollisionMap {
                 // Only checks non-teleport transports (includes portals and levers, but not items and spells)
                 @SuppressWarnings("unchecked") // Casting EMPTY_LIST to List<Transport> is safe here
                 Set<Transport> neighborTransports = config.getTransportsPacked().getOrDefault(neighborPacked, (Set<Transport>)Collections.EMPTY_SET);
+                boolean foundTransport = false;
                 for (Transport transport : neighborTransports) {
                     if (transport.getOrigin() == Transport.UNDEFINED_ORIGIN || visited.get(transport.getOrigin())) {
                         continue;
                     }
                     neighbors.add(new Node(transport.getOrigin(), node));
+                    foundTransport = true;
+                }
+                if (!foundTransport) {
+                    visited.set(neighborPacked);
                 }
             }
         }

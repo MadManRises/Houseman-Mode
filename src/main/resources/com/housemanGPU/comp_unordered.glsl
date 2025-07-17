@@ -62,14 +62,18 @@ void main() {
   vec3 pos = vec3(minfo.x, minfo.y, minfo.z);
   ivec4 texPos = ivec4(0, pos);
 
+
+  int plane = (flags >> 24) & 3;
+  int isBridge = (flags >> 27) & 1;
+
   vec3 vertA = thisA.pos + pos;
   vec3 vertB = thisB.pos + pos;
   vec3 vertC = thisC.pos + pos;
 
   // position vertices in scene and write to out buffer
-  vout[outOffset + myOffset * 3] = vert(vertA, modifyAhsl(thisA.ahsl, vertA));
-  vout[outOffset + myOffset * 3 + 1] = vert(vertB, modifyAhsl(thisB.ahsl, vertB));
-  vout[outOffset + myOffset * 3 + 2] = vert(vertC, modifyAhsl(thisC.ahsl, vertC));
+  vout[outOffset + myOffset * 3] = vert(vertA, modifyAhsl(thisA.ahsl, vertA, plane - isBridge));
+  vout[outOffset + myOffset * 3 + 1] = vert(vertB, modifyAhsl(thisB.ahsl, vertB, plane - isBridge));
+  vout[outOffset + myOffset * 3 + 2] = vert(vertC, modifyAhsl(thisC.ahsl, vertC, plane - isBridge));
 
   if (toffset < 0) {
     uvout[outOffset + myOffset * 3] = vec4(0);

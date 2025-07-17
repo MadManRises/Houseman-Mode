@@ -86,13 +86,13 @@ layout(std430, binding = 7) readonly buffer visitedbuffer_in {
   uvec2 visited[];
 };
 
-uint isVisited(uint x, uint y){
+uint isVisited(uint x, uint y, int plane){
     uint bit = x % 32;
     uint component = (x / 32) % 2;
     uint row = y % 64;
 
-    uint plane = 0;
     const uint planeSize = 64;
+    plane = max(0, plane);
 
     uint regionIndex = 3 * (y / 64) + (x / 64);
     const uint regionSize = 4 * 64;
@@ -100,14 +100,14 @@ uint isVisited(uint x, uint y){
     return (visited[regionIndex * regionSize + plane * planeSize + row][component] >> bit) & 1;
 }
 
-int modifyAhsl(int hsl, vec3 pos){
+int modifyAhsl(int hsl, vec3 pos, int plane){
     uint x = uint((pos.x + 64) / 128) + uint(offset.x) % 64;
     uint y = uint((pos.z + 64) / 128) + uint(offset.y) % 64;
 
-    uint bright = isVisited(x - 1, y - 1)
-                    | isVisited(x, y - 1)
-                    | isVisited(x - 1, y)
-                    | isVisited(x, y);
+    uint bright = isVisited(x - 1, y - 1, plane)
+                    | isVisited(x, y - 1, plane)
+                    | isVisited(x - 1, y, plane)
+                    | isVisited(x, y, plane);
 
     return (hsl / 128) * 128 + max((hsl % 128) / (9 - int(bright) * 8), 1);
 }

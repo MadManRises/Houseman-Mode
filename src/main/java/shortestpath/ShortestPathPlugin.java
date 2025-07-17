@@ -22,6 +22,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.regex.Pattern;
+
+import com.houseman.HousemanModeConfig;
+import com.houseman.HousemanModePlugin;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -59,12 +62,6 @@ import shortestpath.pathfinder.CollisionMap;
 import shortestpath.pathfinder.Pathfinder;
 import shortestpath.pathfinder.PathfinderConfig;
 
-@PluginDescriptor(
-    name = "Shortest Path",
-    description = "Draws the shortest path to a chosen destination on the map<br>" +
-        "Right click on the world map or shift right click a tile to use",
-    tags = {"pathfinder", "map", "waypoint", "navigation"}
-)
 public class ShortestPathPlugin extends Plugin {
     protected static final String CONFIG_GROUP = "shortestpath";
     private static final String PLUGIN_MESSAGE_PATH = "path";
@@ -90,7 +87,7 @@ public class ShortestPathPlugin extends Plugin {
     private ClientThread clientThread;
 
     @Inject
-    private ShortestPathConfig config;
+    private HousemanModeConfig config;
 
     @Inject
     private OverlayManager overlayManager;
@@ -154,11 +151,6 @@ public class ShortestPathPlugin extends Plugin {
     private PathfinderConfig pathfinderConfig;
     @Getter
     private boolean startPointSet = false;
-
-    @Provides
-    public ShortestPathConfig provideConfig(ConfigManager configManager) {
-        return configManager.getConfig(ShortestPathConfig.class);
-    }
 
     @Override
     protected void startUp() {
