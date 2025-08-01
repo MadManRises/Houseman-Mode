@@ -102,7 +102,9 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+import static com.chanceman.menus.ActionHandler.DISABLED;
 import static com.chanceman.menus.ActionHandler.HOUSE_PORTALS;
+import static net.runelite.api.ItemID.*;
 import static net.runelite.api.ScriptID.SPLITPM_CHANGED;
 import static net.runelite.client.RuneLite.RUNELITE_DIR;
 
@@ -141,6 +143,13 @@ public class HousemanModePlugin extends Plugin {
     private static final BufferedImage MARKER_IMAGE = ImageUtil.loadImageResource(ShortestPathPlugin.class, "/shortestpath/marker.png");
 
     private static final Set<String> equippableActions = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList("wield", "wear")));
+
+    private static final Map<Integer, Integer> tileRestorationSources = Map.ofEntries(
+            Map.entry(ENERGY_POTION1, 1),
+            Map.entry(ENERGY_POTION2, 1),
+            Map.entry(ENERGY_POTION3, 1),
+            Map.entry(ENERGY_POTION4, 1)
+    );
 
     private Rectangle minimapRectangle = new Rectangle();
 
@@ -508,14 +517,14 @@ public class HousemanModePlugin extends Plugin {
             }
         });
 
-        eventBus.register(this);
+        //eventBus.register(this);
         if (isNormalWorld()) enableFeatures();
     }
 
     @Override
     protected void shutDown() {
         if (featuresActive) disableFeatures();
-        eventBus.unregister(this);
+       // eventBus.unregister(this);
 
         tutorialIslandRegionIds.clear();
         overlayManager.remove(infoOverlay);
@@ -778,10 +787,12 @@ public class HousemanModePlugin extends Plugin {
 
     public boolean hasItemsToDrop() {
         ItemContainer inventoryItems = client.getItemContainer(net.runelite.api.gameval.InventoryID.INV);
-        for (Item item : inventoryItems.getItems()) {
-            int id = item.getId();
-            if (id != -1 && itemNeedsToBeDropped(id))
-                return true;
+        if (inventoryItems != null) {
+            for (Item item : inventoryItems.getItems()) {
+                int id = item.getId();
+                if (id != -1 && itemNeedsToBeDropped(id))
+                    return true;
+            }
         }
         return false;
     }
@@ -1394,6 +1405,31 @@ public class HousemanModePlugin extends Plugin {
                 .resolve(name);
         Files.createDirectories(dir);
         return dir.resolve("houseman.json");
+    }
+
+    @Subscribe
+    public void onMenuOptionClicked(MenuOptionClicked event) {
+        if (event.getMenuEntry().onClick() == DISABLED) {
+            return;
+        }
+        int item = event.getItemId();
+        if (item != 0){
+            Integer restoration = tileRestorationSources.get(item);
+            if (restoration != null) {
+                remainingTiles += restoration;
+                saveInfo();
+            }
+        }
+    }
+
+    @Subscribe
+    public void onItemContainerChanged(final ItemContainerChanged event)
+    {
+        final int id = event.getContainerId();
+        if (id == InventoryID.INVENTORY.getId() && inHouse)
+        {
+            identifyItems();
+        }
     }
 
 }

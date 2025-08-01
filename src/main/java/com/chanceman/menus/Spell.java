@@ -47,6 +47,7 @@ public enum Spell
 	TELEKINETIC_GRAB("Telekinetic Grab"),
 	VARROCK_TELEPORT("Varrock Teleport"),
 	LUMBRIDGE_TELEPORT("Lumbridge Teleport"),
+	LUMBRIDGE_HOME_TELEPORT("Lumbridge Home Teleport"),
 	FALADOR_TELEPORT("Falador Teleport"),
 	CAMELOT_TELEPORT("Camelot Teleport"),
 	ARDOUGNE_TELEPORT("Ardougne Teleport"),

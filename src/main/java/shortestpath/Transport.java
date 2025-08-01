@@ -143,7 +143,7 @@ public class Transport {
         if ((value = fieldMap.get("menuOption menuTarget objectID")) != null) {
             String[] originArray = value.split(DELIM_SPACE);
             try {
-                objectID = Integer.parseInt(originArray[2]);
+                objectID = Integer.parseInt(originArray[originArray.length - 1]);
             }catch(NumberFormatException e) {}
             catch (ArrayIndexOutOfBoundsException e) {}
         }

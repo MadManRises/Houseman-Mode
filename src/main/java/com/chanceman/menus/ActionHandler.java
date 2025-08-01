@@ -76,7 +76,7 @@ public class ActionHandler {
 	private UnlockedItemsManager unlockedItemsManager;
 
 	// A no-op click handler that marks a menu entry as disabled.
-	private final Consumer<MenuEntry> DISABLED = e -> { };
+	public static final Consumer<MenuEntry> DISABLED = e -> { };
 
 	public void startUp() {
 		eventBus.register(this);
@@ -154,11 +154,13 @@ public class ActionHandler {
 
 		for (MenuEntry entry : menuEntries)
 		{
+			String target = Text.removeTags(entry.getTarget());
+
 			if (!plugin.hasItemsToDrop() && ((plugin.getPathfinder() != null && plugin.getPathfinder().getObjectIDs() != null &&
-					plugin.getPathfinder().getObjectIDs().contains(entry.getIdentifier())) || HOUSE_PORTALS.contains(entry.getIdentifier())))
+					plugin.getPathfinder().getObjectIDs().contains(entry.getIdentifier())) || HOUSE_PORTALS.contains(entry.getIdentifier()) || target.endsWith("Home Teleport")))
 				continue;
 
-			String target = entry.getTarget();
+
 			String action = Text.removeTags(entry.getOption());
 			if (!target.isEmpty()){
 

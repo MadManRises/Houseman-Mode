@@ -14,6 +14,9 @@ import net.runelite.client.eventbus.Subscribe;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static com.chanceman.menus.Spell.*;
 
 @Singleton
 public class Restrictions
@@ -35,6 +38,40 @@ public class Restrictions
 			15375, // RUNE_POUCH_AMOUNT5
 			15376  // RUNE_POUCH_AMOUNT6
 	};
+
+	private static final Set<String> TeleportSpells = Arrays.asList(
+			PADDEWWA_TELEPORT,
+			SENNTISTEN_TELEPORT,
+			KHARYRLL_TELEPORT,
+			LASSAR_TELEPORT,
+			DAREEYAK_TELEPORT,
+			CARRALLANGER_TELEPORT,
+			TELEPORT_TO_TARGET,
+			ANNAKARL_TELEPORT,
+			GHORROCK_TELEPORT,
+			VARROCK_TELEPORT,
+			LUMBRIDGE_TELEPORT,
+			FALADOR_TELEPORT,
+			CAMELOT_TELEPORT,
+			ARDOUGNE_TELEPORT,
+			CIVITAS_ILLA_FORTIS_TELEPORT,
+			TROLLHEIM_TELEPORT,
+			WATCHTOWER_TELEPORT,
+			TELEPORT_TO_HOUSE,
+			APE_ATOLL_TELEPORT,
+			KOUREND_CASTLE_TELEPORT,
+			ARCEUUS_LIBRARY_TELEPORT,
+			DRAYNOR_MANOR_TELEPORT,
+			BATTLEFRONT_TELEPORT,
+			MIND_ALTAR_TELEPORT,
+			RESPAWN_TELEPORT,
+			SALVE_GRAVEYARD_TELEPORT,
+			FENKENSTRAINS_CASTLE_TELEPORT,
+			WEST_ARDOUGNE_TELEPORT,
+			HARMONY_ISLAND_TELEPORT,
+			CEMETERY_TELEPORT,
+			BARROWS_TELEPORT
+	).stream().map(spell -> spell.getSpellName()).collect(Collectors.toSet());
 
 	private static final WorldArea FOUNTAIN_OF_RUNE_AREA =
 			new WorldArea(3367, 3890, 13, 9, 0);
@@ -138,6 +175,19 @@ public class Restrictions
 
 	public boolean isSpellOpEnabled(String spellName)
 	{
+		if (spellName.equals(TELEPORT_TO_HOUSE.getSpellName())){
+			if (!plugin.hasItemsToDrop())
+				return true;
+		}
+
+		if (spellName.endsWith("Home Teleport")){
+			return plugin.getRemainingTiles() < 0;
+		}
+
+		if (TeleportSpells.contains(spellName)){
+			return false;
+		}
+
 		if (isInFountainArea() || isInLMS()) { return true; }
 		BlightedSack sack = BlightedSack.fromSpell(spellName);
 		if (sack != null)
