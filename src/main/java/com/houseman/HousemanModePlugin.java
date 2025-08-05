@@ -336,7 +336,7 @@ public class HousemanModePlugin extends Plugin {
             if (rangeFuture == null && rangeIsDirty) {
                 rangeIsDirty = false;
                 pathfinderConfig.refresh();
-                RangeTask rangeTask = new RangeTask(pathfinderConfig, currentLocation, remainingTiles);
+                RangeTask rangeTask = new RangeTask(pathfinderConfig, currentLocation, remainingTiles, inHouse);
                 rangeFuture = rangeExecutor.submit(rangeTask);
                 if (remainingTiles < 0){
                     Set<Integer> targets = new HashSet<>();

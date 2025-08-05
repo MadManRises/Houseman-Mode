@@ -15,10 +15,12 @@ public class RangeTask implements Callable<RangeResult> {
     private PriorityQueue<RangeNode> queue = new PriorityQueue<>();
     private PathfinderConfig config;
     private CollisionMap map;
+    private boolean inHouse;
 
-    public RangeTask(PathfinderConfig config, int start, int range) {
+    public RangeTask(PathfinderConfig config, int start, int range, boolean inHouse) {
         queue.add(new RangeNode(new Node(start, null), 0));
         this.range = range;
+        this.inHouse = inHouse;
 
         this.config = config;
         this.map = config.getMap();
@@ -36,6 +38,9 @@ public class RangeTask implements Callable<RangeResult> {
                 if (result.visitedTiles.get(node.node.packedPosition))
                     continue;
                 result.visitedTiles.set(node.node.packedPosition);
+
+                if (inHouse)
+                    config.refreshTeleports(node.node.packedPosition, 0);
 
                 if (node.distance == range) {
                     result.border.add(node.node.packedPosition);

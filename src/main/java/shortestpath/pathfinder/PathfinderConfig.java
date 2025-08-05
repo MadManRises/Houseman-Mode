@@ -195,6 +195,7 @@ public class PathfinderConfig {
 
     /** Specialized method for only updating player-held item and spell transports */
     public void refreshTeleports(int packedLocation, int wildernessLevel) {
+
         Set<Transport> usableWildyTeleports = new HashSet<>(usableTeleports.size());
 
         for (Transport teleport : usableTeleports) {
