@@ -57,7 +57,6 @@ import net.runelite.api.widgets.ComponentID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetModalMode;
 import net.runelite.api.worldmap.WorldMap;
-import net.runelite.api.worldmap.WorldMapRegion;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
@@ -68,6 +67,7 @@ import net.runelite.client.game.SpriteManager;
 import net.runelite.client.input.KeyListener;
 import net.runelite.client.input.KeyManager;
 import net.runelite.client.plugins.Plugin;
+import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.JagexColors;
@@ -78,10 +78,13 @@ import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
-import shortestpath.*;
 import shortestpath.pathfinder.CollisionMap;
 import shortestpath.pathfinder.Pathfinder;
+import shortestpath.ShortestPathPlugin;
+import shortestpath.WorldPointUtil;
 import shortestpath.pathfinder.PathfinderConfig;
+import shortestpath.ShortestPathConfig;
+import shortestpath.pathfinder.VisitedTiles;
 
 import javax.inject.Inject;
 import javax.swing.*;
@@ -94,8 +97,6 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Deque;
 import java.util.List;
@@ -105,16 +106,15 @@ import java.util.stream.Collectors;
 import static com.chanceman.menus.ActionHandler.DISABLED;
 import static com.chanceman.menus.ActionHandler.HOUSE_PORTALS;
 import static net.runelite.api.ItemID.*;
-import static net.runelite.api.ScriptID.SPLITPM_CHANGED;
 import static net.runelite.client.RuneLite.RUNELITE_DIR;
 
 @Slf4j
 @PluginDescriptor(
         name = "Houseman Mode",
         description = "Support for houseman mode",
-        tags = {"overlay", "tiles"},
-        conflicts = "Shortest Path"
+        tags = {"overlay", "tiles"}
 )
+@PluginDependency(ShortestPathPlugin.class)
 public class HousemanModePlugin extends Plugin {
     final int COLLECTION_LOG_POPUP_WIDGET = 660;
 
@@ -140,7 +140,6 @@ public class HousemanModePlugin extends Plugin {
     private static final String FLASH_ICONS = "Flash icons";
     private static final String START = ColorUtil.wrapWithColorTag("Start", JagexColors.MENU_TARGET);
     private static final String TARGET = ColorUtil.wrapWithColorTag("Target", JagexColors.MENU_TARGET);
-    private static final BufferedImage MARKER_IMAGE = ImageUtil.loadImageResource(ShortestPathPlugin.class, "/shortestpath/marker.png");
 
     private static final Set<String> equippableActions = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList("wield", "wear")));
 
@@ -169,6 +168,9 @@ public class HousemanModePlugin extends Plugin {
 
     @Inject
     public HousemanModeConfig config;
+
+    @Inject
+    public ShortestPathConfig shortestPathConfig;
 
     @Inject
     private ConfigManager configManager;
@@ -205,18 +207,6 @@ public class HousemanModePlugin extends Plugin {
 
     @Inject
     private ItemManager itemManager;
-
-    @Inject
-    private PathTileOverlay pathOverlay;
-
-    @Inject
-    private PathMinimapOverlay pathMinimapOverlay;
-
-    @Inject
-    private PathMapOverlay pathMapOverlay;
-
-    @Inject
-    private PathMapTooltipOverlay pathMapTooltipOverlay;
 
     @Inject private DropsTabUI dropsTabUI;
     @Inject private DropFetcher dropFetcher;
@@ -297,6 +287,7 @@ public class HousemanModePlugin extends Plugin {
     private WorldPoint lastTile;
     private int lastPlane;
     private boolean inHouse = false;
+    private boolean homePathCalculated = false;
 
     private boolean rangeIsDirty = true;
     private ExecutorService rangeExecutor = Executors.newSingleThreadExecutor();
@@ -349,10 +340,16 @@ public class HousemanModePlugin extends Plugin {
                 pathfinderConfig.refresh();
                 RangeTask rangeTask = new RangeTask(pathfinderConfig, currentLocation, remainingTiles, inHouse);
                 rangeFuture = rangeExecutor.submit(rangeTask);
-                if (remainingTiles < 0){
+                if (remainingTiles < 0 && !homePathCalculated){
+                    homePathCalculated = true;
                     Set<Integer> targets = new HashSet<>();
                     targets.addAll(houseLeavingPos.toWorldPointList().stream().map(point -> WorldPointUtil.packWorldPoint(point)).collect(Collectors.toList()));
-                    restartPathfinding(currentLocation, targets);
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("start", currentLocation);
+                    data.put("target", targets);
+                    eventBus.post(
+                            new PluginMessage("shortestpath", "path", data)
+                    );
                 }
             }
         }
@@ -414,6 +411,7 @@ public class HousemanModePlugin extends Plugin {
 
         if (gameObject.getId() == 4525) {
             inHouse = true;
+            homePathCalculated = true;
             if (remainingTiles >= 0 || !hasItemsToDrop()) {
                 remainingTiles = client.getTotalLevel() / 2;
                 identifyItems();
@@ -429,7 +427,13 @@ public class HousemanModePlugin extends Plugin {
             return;
         }
 
-        for (Item item : client.getItemContainer(InventoryID.INVENTORY).getItems()){
+        Item[] items = client.getItemContainer(InventoryID.INVENTORY).getItems();
+
+        if (items == null){
+            return;
+        }
+
+        for (Item item : items){
             int itemId = item.getId();
             ItemComposition comp = itemManager.getItemComposition(itemId);
             String name = (comp != null && comp.getName() != null) ? comp.getName() : item.toString();
@@ -490,7 +494,7 @@ public class HousemanModePlugin extends Plugin {
 
     @Override
     protected void startUp() {
-        pathfinderConfig = new PathfinderConfig(client, config);
+        pathfinderConfig = new PathfinderConfig(client, shortestPathConfig);
 
         tutorialIslandRegionIds.add(12079);
         tutorialIslandRegionIds.add(12080);
@@ -504,11 +508,6 @@ public class HousemanModePlugin extends Plugin {
         overlayManager.add(inventoryOverlay);
         log.debug("startup");
 
-        overlayManager.add(pathOverlay);
-        overlayManager.add(pathMinimapOverlay);
-        overlayManager.add(pathMapOverlay);
-        overlayManager.add(pathMapTooltipOverlay);
-
         keyManager.registerKeyListener(new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
@@ -517,11 +516,11 @@ public class HousemanModePlugin extends Plugin {
 
             @Override
             public void keyPressed(KeyEvent e) {
-                /*if (e.getKeyChar()=='r'){
+                if (config.enableOverwriteSteps() && e.getKeyChar()=='r'){
                     remainingTiles = config.overwriteSteps();
                     rangeIsDirty = true;
                     saveInfo();
-                }*/
+                }
             }
 
             @Override
@@ -547,51 +546,10 @@ public class HousemanModePlugin extends Plugin {
         overlayManager.remove(inventoryOverlay);
         points.clear();
 
-        overlayManager.remove(pathOverlay);
-        overlayManager.remove(pathMinimapOverlay);
-        overlayManager.remove(pathMapOverlay);
-        overlayManager.remove(pathMapTooltipOverlay);
-
         if (pathfindingExecutor != null) {
             pathfindingExecutor.shutdownNow();
             pathfindingExecutor = null;
         }
-    }
-
-    public void restartPathfinding(int start, Set<Integer> ends, boolean canReviveFiltered) {
-        synchronized (pathfinderMutex) {
-            if (pathfinder != null) {
-                if (pathfinderFuture.isDone())
-                {
-                    cachedPathfinder = pathfinder;
-                }else {
-                    pathfinder.cancel();
-                    pathfinderFuture.cancel(true);
-                }
-            }
-
-            if (pathfindingExecutor == null) {
-                ThreadFactory shortestPathNaming = new ThreadFactoryBuilder().setNameFormat("shortest-path-%d").build();
-                pathfindingExecutor = Executors.newSingleThreadExecutor(shortestPathNaming);
-            }
-        }
-
-        clientThread.invokeLater(() -> {
-            pathfinderConfig.refresh();
-            pathfinderConfig.filterLocations(ends, canReviveFiltered);
-            synchronized (pathfinderMutex) {
-                if (ends.isEmpty()) {
-                    setTarget(WorldPointUtil.UNDEFINED);
-                } else {
-                    pathfinder = new Pathfinder(pathfinderConfig, start, ends);
-                    pathfinderFuture = pathfindingExecutor.submit(pathfinder);
-                }
-            }
-        });
-    }
-
-    public void restartPathfinding(int start, Set<Integer> ends) {
-        restartPathfinding(start, ends, true);
     }
 
 
@@ -620,13 +578,13 @@ public class HousemanModePlugin extends Plugin {
         return remainingTiles;
     }
 
-    public CollisionMap getMap() {
+    /*public CollisionMap getMap() {
         return pathfinderConfig.getMap();
     }
 
     public Map<Integer, Set<Transport>> getTransports() {
         return pathfinderConfig.getTransports();
-    }
+    }*/
 
     private int handleWalkedToTile(WorldPoint currentPlayerPoint) {
         if (currentPlayerPoint == null ||
@@ -1115,75 +1073,6 @@ public class HousemanModePlugin extends Plugin {
 
     public ItemManager getItemManager() { return itemManager; }
 
-    @Subscribe
-    public void onMenuEntryAdded(MenuEntryAdded event) {
-        if (client.isKeyPressed(KeyCode.KC_SHIFT)
-                && event.getType() == MenuAction.WALK.getId()) {
-            addMenuEntry(event, SET, TARGET, 1);
-            if (pathfinder != null) {
-                if (pathfinder.getTargets().size() >= 1) {
-                    addMenuEntry(event, SET, TARGET + ColorUtil.wrapWithColorTag(" " +
-                            (pathfinder.getTargets().size() + 1), JagexColors.MENU_TARGET), 1);
-                }
-                for (int target : pathfinder.getTargets()) {
-                    if (target != WorldPointUtil.UNDEFINED) {
-                        addMenuEntry(event, SET, START, 1);
-                        break;
-                    }
-                }
-                int selectedTile = getSelectedWorldPoint();
-                if (pathfinder.getPath() != null) {
-                    for (int tile : pathfinder.getPath()) {
-                        if (tile == selectedTile) {
-                            addMenuEntry(event, CLEAR, PATH, 1);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        final Widget map = client.getWidget(ComponentID.WORLD_MAP_MAPVIEW);
-
-        if (map != null) {
-            if (map.getBounds().contains(
-                    client.getMouseCanvasPosition().getX(),
-                    client.getMouseCanvasPosition().getY())) {
-                addMenuEntry(event, SET, TARGET, 0);
-                if (pathfinder != null) {
-                    if (pathfinder.getTargets().size() >= 1) {
-                        addMenuEntry(event, SET, TARGET + ColorUtil.wrapWithColorTag(" " +
-                                (pathfinder.getTargets().size() + 1), JagexColors.MENU_TARGET), 0);
-                    }
-                    for (int target : pathfinder.getTargets()) {
-                        if (target != WorldPointUtil.UNDEFINED) {
-                            addMenuEntry(event, SET, START, 0);
-                            addMenuEntry(event, CLEAR, PATH, 0);
-                        }
-                    }
-                }
-            }
-            if (event.getOption().equals(FLASH_ICONS) && pathfinderConfig.hasDestination(simplify(event.getTarget()))) {
-                addMenuEntry(event, FIND_CLOSEST, event.getTarget(), 1);
-            }
-        }
-
-        final Shape minimap = getMinimapClipArea();
-
-        if (minimap != null && pathfinder != null
-                && minimap.contains(
-                client.getMouseCanvasPosition().getX(),
-                client.getMouseCanvasPosition().getY())) {
-            addMenuEntry(event, CLEAR, PATH, 0);
-        }
-
-        if (minimap != null && pathfinder != null
-                && ("Floating World Map".equals(Text.removeTags(event.getOption()))
-                || "Close Floating panel".equals(Text.removeTags(event.getOption())))) {
-            addMenuEntry(event, CLEAR, PATH, 1);
-        }
-    }
-
     private Widget getMinimapDrawWidget() {
         if (client.isResized()) {
             if (client.getVarbitValue(Varbits.SIDE_PANELS) == 1) {
@@ -1192,229 +1081,6 @@ public class HousemanModePlugin extends Plugin {
             return client.getWidget(ComponentID.RESIZABLE_VIEWPORT_MINIMAP_DRAW_AREA);
         }
         return client.getWidget(ComponentID.FIXED_VIEWPORT_MINIMAP_DRAW_AREA);
-    }
-
-    public Shape getMinimapClipArea() {
-        Widget minimapWidget = getMinimapDrawWidget();
-
-        if (minimapWidget == null || minimapWidget.isHidden() || !minimapRectangle.equals(minimapRectangle = minimapWidget.getBounds())) {
-            minimapClipFixed = null;
-            minimapClipResizeable = null;
-            minimapSpriteFixed = null;
-            minimapSpriteResizeable = null;
-        }
-
-        if (minimapWidget == null || minimapWidget.isHidden()) {
-            return null;
-        }
-
-        if (client.isResized()) {
-            if (minimapClipResizeable != null) {
-                return minimapClipResizeable;
-            }
-            if (minimapSpriteResizeable == null) {
-                minimapSpriteResizeable = spriteManager.getSprite(SpriteID.RESIZEABLE_MODE_MINIMAP_ALPHA_MASK, 0);
-            }
-            if (minimapSpriteResizeable != null) {
-                minimapClipResizeable = bufferedImageToPolygon(minimapSpriteResizeable);
-                return minimapClipResizeable;
-            }
-            return getMinimapClipAreaSimple();
-        }
-        if (minimapClipFixed != null) {
-            return minimapClipFixed;
-        }
-        if (minimapSpriteFixed == null) {
-            minimapSpriteFixed = spriteManager.getSprite(SpriteID.FIXED_MODE_MINIMAP_ALPHA_MASK, 0);
-        }
-        if (minimapSpriteFixed != null) {
-            minimapClipFixed = bufferedImageToPolygon(minimapSpriteFixed);
-            return minimapClipFixed;
-        }
-        return getMinimapClipAreaSimple();
-    }
-
-    private Polygon bufferedImageToPolygon(BufferedImage image) {
-        Color outsideColour = null;
-        Color previousColour;
-        final int width = image.getWidth();
-        final int height = image.getHeight();
-        List<java.awt.Point> points = new ArrayList<>();
-        for (int y = 0; y < height; y++) {
-            previousColour = outsideColour;
-            for (int x = 0; x < width; x++) {
-                int rgb = image.getRGB(x, y);
-                int a = (rgb & 0xff000000) >>> 24;
-                int r = (rgb & 0x00ff0000) >> 16;
-                int g = (rgb & 0x0000ff00) >> 8;
-                int b = (rgb & 0x000000ff) >> 0;
-                Color colour = new Color(r, g, b, a);
-                if (x == 0 && y == 0) {
-                    outsideColour = colour;
-                    previousColour = colour;
-                }
-                if (!colour.equals(outsideColour) && previousColour.equals(outsideColour)) {
-                    points.add(new java.awt.Point(x, y));
-                }
-                if ((colour.equals(outsideColour) || x == (width - 1)) && !previousColour.equals(outsideColour)) {
-                    points.add(0, new java.awt.Point(x, y));
-                }
-                previousColour = colour;
-            }
-        }
-        int offsetX = minimapRectangle.x;
-        int offsetY = minimapRectangle.y;
-        Polygon polygon = new Polygon();
-        for (java.awt.Point point : points) {
-            polygon.addPoint(point.x + offsetX, point.y + offsetY);
-        }
-        return polygon;
-    }
-
-    private void addMenuEntry(MenuEntryAdded event, String option, String target, int position) {
-        List<MenuEntry> entries = new LinkedList<>(Arrays.asList(client.getMenuEntries()));
-
-        if (entries.stream().anyMatch(e -> e.getOption().equals(option) && e.getTarget().equals(target))) {
-            return;
-        }
-
-        client.createMenuEntry(position)
-                .setOption(option)
-                .setTarget(target)
-                .setParam0(event.getActionParam0())
-                .setParam1(event.getActionParam1())
-                .setIdentifier(event.getIdentifier())
-                .setType(MenuAction.RUNELITE)
-                .onClick(this::onMenuOptionClicked);
-    }
-
-    private Shape getMinimapClipAreaSimple() {
-        Widget minimapDrawArea = getMinimapDrawWidget();
-
-        if (minimapDrawArea == null || minimapDrawArea.isHidden()) {
-            return null;
-        }
-
-        Rectangle bounds = minimapDrawArea.getBounds();
-
-        return new Ellipse2D.Double(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight());
-    }
-
-    private void onMenuOptionClicked(MenuEntry entry) {
-        if (entry.getOption().equals(SET) && entry.getTarget().equals(TARGET)) {
-            setTarget(getSelectedWorldPoint());
-        } else if (entry.getOption().equals(SET) && pathfinder != null && entry.getTarget().equals(TARGET +
-                ColorUtil.wrapWithColorTag(" " + (pathfinder.getTargets().size() + 1), JagexColors.MENU_TARGET))) {
-            setTarget(getSelectedWorldPoint(), true);
-        } else if (entry.getOption().equals(SET) && entry.getTarget().equals(START)) {
-            setStart(getSelectedWorldPoint());
-        } else if (entry.getOption().equals(CLEAR) && entry.getTarget().equals(PATH)) {
-            setTarget(WorldPointUtil.UNDEFINED);
-        } else if (entry.getOption().equals(FIND_CLOSEST)) {
-            setTargets(pathfinderConfig.getDestinations(simplify(entry.getTarget())), true);
-        }
-    }
-
-    private String simplify(String text) {
-        return Text.removeTags(text).toLowerCase()
-                .replaceAll("[^a-zA-Z ]", "")
-                .replaceAll("[ ]", "_")
-                .replace("__", "_");
-    }
-
-    private void setTargets(Set<Integer> targets, boolean append) {
-        if (targets == null || targets.isEmpty()) {
-            synchronized (pathfinderMutex) {
-                if (pathfinder != null) {
-                    pathfinder.cancel();
-                }
-                pathfinder = null;
-                cachedPathfinder = null;
-            }
-
-            worldMapPointManager.removeIf(x -> x == marker);
-            marker = null;
-            startPointSet = false;
-        } else {
-            Player localPlayer = client.getLocalPlayer();
-            if (!startPointSet && localPlayer == null) {
-                return;
-            }
-            worldMapPointManager.removeIf(x -> x == marker);
-            if (targets.size() == 1) {
-                marker = new WorldMapPoint(WorldPointUtil.unpackWorldPoint(targets.iterator().next()), MARKER_IMAGE);
-                marker.setName("Target");
-                marker.setTarget(marker.getWorldPoint());
-                marker.setJumpOnClick(true);
-                worldMapPointManager.add(marker);
-            }
-
-            int start = WorldPointUtil.fromLocalInstance(client, localPlayer.getLocalLocation());
-            if (startPointSet && pathfinder != null) {
-                start = pathfinder.getStart();
-            }
-            Set<Integer> destinations = new HashSet<>(targets);
-            if (pathfinder != null && append) {
-                destinations.addAll(pathfinder.getTargets());
-            }
-            restartPathfinding(start, destinations, append);
-        }
-    }
-
-    private int getSelectedWorldPoint() {
-        if (client.getWidget(ComponentID.WORLD_MAP_MAPVIEW) == null) {
-            if (client.getSelectedSceneTile() != null) {
-                return WorldPointUtil.fromLocalInstance(client, client.getSelectedSceneTile().getLocalLocation());
-            }
-        } else {
-            return client.isMenuOpen()
-                    ? calculateMapPoint(lastMenuOpenedPoint.getX(), lastMenuOpenedPoint.getY())
-                    : calculateMapPoint(client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY());
-        }
-        return WorldPointUtil.UNDEFINED;
-    }
-
-    public int calculateMapPoint(int pointX, int pointY) {
-        WorldMap worldMap = client.getWorldMap();
-        float zoom = worldMap.getWorldMapZoom();
-        int mapPoint = WorldPointUtil.packWorldPoint(worldMap.getWorldMapPosition().getX(), worldMap.getWorldMapPosition().getY(), 0);
-        int middleX = mapWorldPointToGraphicsPointX(mapPoint);
-        int middleY = mapWorldPointToGraphicsPointY(mapPoint);
-
-        if (pointX == Integer.MIN_VALUE || pointY == Integer.MIN_VALUE ||
-                middleX == Integer.MIN_VALUE || middleY == Integer.MIN_VALUE) {
-            return WorldPointUtil.UNDEFINED;
-        }
-
-        final int dx = (int) ((pointX - middleX) / zoom);
-        final int dy = (int) ((-(pointY - middleY)) / zoom);
-
-        return WorldPointUtil.dxdy(mapPoint, dx, dy);
-    }
-
-    private void setTarget(int target) {
-        setTarget(target, false);
-    }
-
-    private void setTarget(int target, boolean append) {
-        Set<Integer> targets = new HashSet<>();
-        if (target != WorldPointUtil.UNDEFINED) {
-            targets.add(target);
-        }
-        setTargets(targets, append);
-    }
-
-    private void setStart(int start) {
-        if (pathfinder == null) {
-            return;
-        }
-        startPointSet = true;
-        restartPathfinding(start, pathfinder.getTargets());
-    }
-
-    @Subscribe
-    public void onMenuOpened(MenuOpened event) {
-        lastMenuOpenedPoint = client.getMouseCanvasPosition();
     }
 
     private Path getFilePath() throws IOException
@@ -1467,6 +1133,14 @@ public class HousemanModePlugin extends Plugin {
 
         remainingTiles = -1;
         saveInfo();
+    }
+
+    public static boolean isVisible(VisitedTiles currentTiles, WorldPoint p){
+        return currentTiles.get(p.getX(), p.getY(), p.getPlane())
+                || currentTiles.get(p.getX()-1, p.getY(), p.getPlane())
+                || currentTiles.get(p.getX()+1, p.getY(), p.getPlane())
+                || currentTiles.get(p.getX(), p.getY()-1, p.getPlane())
+                || currentTiles.get(p.getX(), p.getY()+1, p.getPlane());
     }
 
 

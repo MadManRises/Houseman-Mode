@@ -1,8 +1,8 @@
 package com.houseman;
 
-import shortestpath.pathfinder.VisitedTiles;
-
 import java.util.List;
+
+import shortestpath.pathfinder.VisitedTiles;
 
 public class RangeResult {
     public List<Integer> border;

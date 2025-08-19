@@ -9,7 +9,6 @@ import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.WidgetItemOverlay;
-import shortestpath.WorldPointUtil;
 
 import java.awt.*;
 import java.util.List;

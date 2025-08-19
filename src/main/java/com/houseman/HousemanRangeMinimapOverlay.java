@@ -14,8 +14,8 @@ import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import shortestpath.ShortestPathPlugin;
-import shortestpath.WorldPointUtil;
 import shortestpath.pathfinder.VisitedTiles;
+import shortestpath.WorldPointUtil;
 
 import java.awt.*;
 import java.util.List;
@@ -67,7 +67,7 @@ public class HousemanRangeMinimapOverlay extends Overlay {
                 for (int x = 0; x < widthInTiles+1; x++) {
                     for (int y = 0; y < widthInTiles+1; y++) {
                         WorldPoint p = new WorldPoint(player.getX() - widthInTiles / 2 + x, player.getY() - widthInTiles / 2 + y, player.getPlane());
-                        if (!currentTiles.get(p.getX(), p.getY(), p.getPlane()))
+                        if (!HousemanModePlugin.isVisible(currentTiles, p))
                             drawTile(graphics, WorldPointUtil.packWorldPoint(p), new Color(1, 1, 1, 255));
                     }
                 }

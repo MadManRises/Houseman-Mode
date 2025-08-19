@@ -8,6 +8,9 @@ repositories {
 		url = 'https://repo.runelite.net'
 	}
 	mavenCentral()
+    flatDir {
+        dirs("..\\shortest-path\\build\\libs")
+    }
 }
 
 def runeLiteVersion = 'latest.release'
@@ -17,6 +20,8 @@ dependencies {
 
 	implementation 'org.jsoup:jsoup:1.13.1'
 
+    compileOnly 'shortestpath:shortest-path:1.17.11'
+
 	compileOnly 'org.projectlombok:lombok:1.18.4'
 	annotationProcessor 'org.projectlombok:lombok:1.18.4'
 
@@ -25,6 +30,7 @@ dependencies {
 	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion, {
 		exclude group: 'ch.qos.logback', module: 'logback-classic'
 	}
+    testImplementation 'shortestpath:shortest-path:1.17.11'
 }
 
 group = 'com.houseman'

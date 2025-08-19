@@ -156,15 +156,16 @@ public class ActionHandler {
 		{
 			String target = Text.removeTags(entry.getTarget());
 
-			if (!plugin.hasItemsToDrop() && ((plugin.getPathfinder() != null && plugin.getPathfinder().getObjectIDs() != null &&
-					plugin.getPathfinder().getObjectIDs().contains(entry.getIdentifier())) || HOUSE_PORTALS.contains(entry.getIdentifier()) || target.endsWith("Home Teleport")))
+            //TODO
+			if (!plugin.hasItemsToDrop() && (/*(plugin.getPathfinder() != null && plugin.getPathfinder().getObjectIDs() != null &&
+					plugin.getPathfinder().getObjectIDs().contains(entry.getIdentifier())) ||*/ HOUSE_PORTALS.contains(entry.getIdentifier()) || target.endsWith("Home Teleport")))
 				continue;
 
 
 			String action = Text.removeTags(entry.getOption());
 			if (!target.isEmpty()){
 
-				if (!action.equalsIgnoreCase("drop")){
+				if (!action.equalsIgnoreCase("drop") && !action.equalsIgnoreCase("destroy")){
 					root.removeMenuEntry(entry);
 				}
 			}else if (plugin.hasItemsToDrop()){

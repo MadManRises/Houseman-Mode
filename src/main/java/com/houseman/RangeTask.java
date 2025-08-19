@@ -1,13 +1,13 @@
 package com.houseman;
 
-import shortestpath.pathfinder.*;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.Callable;
-
+import shortestpath.pathfinder.PathfinderConfig;
+import shortestpath.pathfinder.CollisionMap;
+import shortestpath.pathfinder.Node;
+import shortestpath.pathfinder.VisitedTiles;
 
 public class RangeTask implements Callable<RangeResult> {
     private int range;

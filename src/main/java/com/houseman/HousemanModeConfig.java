@@ -26,6 +26,7 @@
  */
 package com.houseman;
 
+import com.chanceman.ChanceManConfig;
 import net.runelite.client.config.*;
 import shortestpath.ShortestPathConfig;
 
@@ -34,7 +35,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 @ConfigGroup("housemanMode")
-public interface HousemanModeConfig extends ShortestPathConfig {
+public interface HousemanModeConfig extends ChanceManConfig {
     @ConfigSection(
             name = "Settings",
             description = "Settings'",
@@ -43,40 +44,11 @@ public interface HousemanModeConfig extends ShortestPathConfig {
     String settingsSection = "settings";
 
     @ConfigSection(
-            name = "Shortest Path - Settings",
-            description = "Options for the pathfinding",
-            position = 1
-    )
-    String shortestPathSettings = "sectionSettings";
-
-    @ConfigSection(
             name = "Chance Man - Settings",
             description = "Chance Man - Settings'",
             position = 2
     )
     String chancemanSection = "chancemansettings";
-
-    @ConfigSection(
-            name = "Display",
-            description = "Options for displaying the path on the world map, minimap and scene tiles",
-            position = 3
-    )
-    String sectionDisplay = "sectionDisplay";
-
-    @ConfigSection(
-            name = "Colours",
-            description = "Colours for the path map, minimap and scene tiles",
-            position = 4
-    )
-    String sectionColours = "sectionColours";
-
-    @ConfigSection(
-            name = "Debug Options",
-            description = "Various options for debugging",
-            position = 5,
-            closedByDefault = true
-    )
-    String sectionDebug = "sectionDebug";
 
     @Range(
             min = Integer.MIN_VALUE
@@ -115,11 +87,22 @@ public interface HousemanModeConfig extends ShortestPathConfig {
     }
 
     @ConfigItem(
+            keyName = "enableOverwriteSteps",
+            name = "enable step count resetting",
+            section = settingsSection,
+            description = "Debug tool",
+            position = 4
+    )
+    default boolean enableOverwriteSteps() {
+        return false;
+    }
+
+    @ConfigItem(
             keyName = "renderBordersInGame",
             name = "Render debug border tiles in game",
             section = settingsSection,
             description = "Turns on debug border tile rendering in the game view.",
-            position = 4
+            position = 5
     )
     default boolean renderBordersInGame() {
         return false;
@@ -130,7 +113,7 @@ public interface HousemanModeConfig extends ShortestPathConfig {
             name = "Render debug border tiles in map",
             section = settingsSection,
             description = "Turns on debug border tile rendering in the world map.",
-            position = 4
+            position = 6
     )
     default boolean renderBordersInMap() {
         return false;
@@ -141,7 +124,7 @@ public interface HousemanModeConfig extends ShortestPathConfig {
             name = "Render debug border tiles in minimap",
             section = settingsSection,
             description = "Turns on debug border tile rendering in the mini map.",
-            position = 4
+            position = 7
     )
     default boolean renderBordersInMinimap() {
         return false;

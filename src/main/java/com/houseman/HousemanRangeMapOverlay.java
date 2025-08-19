@@ -6,6 +6,7 @@ import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.widgets.ComponentID;
 import net.runelite.api.widgets.Widget;
@@ -15,8 +16,6 @@ import net.runelite.client.events.PluginMessage;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
-import shortestpath.WorldPointUtil;
-import shortestpath.pathfinder.VisitedTiles;
 
 import java.awt.*;
 import java.awt.geom.Area;
@@ -25,6 +24,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+
+import shortestpath.pathfinder.VisitedTiles;
+import shortestpath.WorldPointUtil;
 
 public class HousemanRangeMapOverlay extends Overlay {
     private final Client client;
@@ -158,8 +160,10 @@ public class HousemanRangeMapOverlay extends Overlay {
 
                     for (int y = 0; y < 1650; y++) {
                         for (int x = 0; x < 2966; x++) {
-                            images.image.setRGB(x, y, new Color(1, 1, 1, currentTiles.get(posX + x, posY + 1650 - y - 1, 0) ? 0 : 225).getRGB());
-                            images.undergroundImage.setRGB(x, y, new Color(1, 1, 1, currentTiles.get(posX + x, 6400 + posY + 1650 - y - 1, 0) ? 0 : 225).getRGB());
+                            WorldPoint point = new WorldPoint(posX + x, posY + 1650 - y - 1, 0);
+                            images.image.setRGB(x, y, new Color(1, 1, 1, HousemanModePlugin.isVisible(currentTiles, point) ? 0 : 225).getRGB());
+                            WorldPoint undergroundPoint = new WorldPoint(posX + x, 6400 + posY + 1650 - y - 1, 0);
+                            images.undergroundImage.setRGB(x, y, new Color(1, 1, 1, HousemanModePlugin.isVisible(currentTiles, undergroundPoint) ? 0 : 225).getRGB());
                         }
                     }
 

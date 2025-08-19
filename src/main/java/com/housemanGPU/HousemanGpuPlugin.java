@@ -33,9 +33,9 @@ import java.awt.Image;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
+import java.lang.reflect.Field;
 import java.nio.*;
 import java.util.Map;
-import java.util.stream.LongStream;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
@@ -70,11 +70,12 @@ import org.lwjgl.opengl.GLCapabilities;
 import org.lwjgl.opengl.GLUtil;
 import org.lwjgl.system.Callback;
 import org.lwjgl.system.Configuration;
-import shortestpath.pathfinder.SplitFlagMap;
-import shortestpath.pathfinder.VisitedTiles;
 
-import static net.runelite.api.Constants.SCENE_SIZE;
-import static net.runelite.api.Constants.TILE_FLAG_BRIDGE;
+import shortestpath.pathfinder.VisitedTiles;
+import shortestpath.pathfinder.SplitFlagMap.RegionExtent;
+
+import static net.runelite.api.Constants.*;
+import static net.runelite.api.Constants.REGION_SIZE;
 
 @PluginDescriptor(
 	name = "Houseman GPU",
@@ -950,16 +951,46 @@ public class HousemanGpuPlugin extends Plugin implements DrawCallbacks
 		if (tiles != null){
 			for (int y = 0; y < 3; ++y){
 				for (int x = 0; x < 3; ++x){
+                    int written = 0;
+                    try {
+                        Field regionsExtentField = tiles.getClass().getDeclaredField("regionExtents");
+                        regionsExtentField.setAccessible(true);
 
-					VisitedTiles.VisitedRegion region = tiles.getRegion(scene.getBaseX() + 64 * x, scene.getBaseY() + 64 * y);
-					int written = 0;
-					if (region != null) {
-						visitedBuf.put(region.data());
-						written = region.data().length;
-					}
-					for (; written < 4 * 64; ++written){
-						visitedBuf.put(scene.isInstance() && remainingTiles > 0 ? -1 : 0);
-					}
+                        RegionExtent regionExtents = (RegionExtent) regionsExtentField.get(tiles);
+
+                        Field widthField = tiles.getClass().getDeclaredField("widthInclusive");
+                        widthField.setAccessible(true);
+
+                        int widthInclusive = (int) widthField.get(tiles);
+
+                        Field regionsField = tiles.getClass().getDeclaredField("visitedRegions");
+                        regionsField.setAccessible(true);
+
+                        Object[] regions = (Object[]) regionsField.get(tiles);
+
+                        final int regionIndex = ((scene.getBaseX() + 64 * x) / REGION_SIZE - regionExtents.minX) + ((scene.getBaseY() + 64 * y) / REGION_SIZE - regionExtents.minY) * widthInclusive;
+
+                        if (regionIndex < 0 || regionIndex >= regions.length) {
+                            continue;
+                        }
+
+                        Object region = regions[regionIndex];
+
+                        if (region != null) {
+                            Field planesField = region.getClass().getDeclaredField("planes");
+                            planesField.setAccessible(true);
+
+                            long[] data = (long[]) planesField.get(region);
+
+                            visitedBuf.put(data);
+                            written = data.length;
+                        }
+                    }catch(Exception e){
+
+                    }
+                    for (; written < 4 * 64; ++written) {
+                        visitedBuf.put(scene.isInstance() && remainingTiles > 0 ? -1 : 0);
+                    }
 				}
 			}
 		}

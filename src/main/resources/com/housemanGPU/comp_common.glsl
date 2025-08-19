@@ -104,7 +104,16 @@ int modifyAhsl(int hsl, vec3 pos, int plane){
     uint x = uint((pos.x + 64) / 128) + uint(offset.x) % 64;
     uint y = uint((pos.z + 64) / 128) + uint(offset.y) % 64;
 
-    uint bright = isVisited(x - 1, y - 1, plane)
+    uint bright =
+                isVisited(x - 2, y - 1, plane)
+                    | isVisited(x - 2, y, plane)
+                    | isVisited(x + 1, y - 1, plane)
+                    | isVisited(x + 1, y, plane)
+                    | isVisited(x - 1, y - 2, plane)
+                    | isVisited(x, y - 2, plane)
+                    | isVisited(x - 1, y + 1, plane)
+                    | isVisited(x, y + 1, plane)
+                    | isVisited(x - 1, y - 1, plane)
                     | isVisited(x, y - 1, plane)
                     | isVisited(x - 1, y, plane)
                     | isVisited(x, y, plane);
