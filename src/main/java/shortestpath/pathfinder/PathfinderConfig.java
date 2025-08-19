@@ -497,7 +497,7 @@ public class PathfinderConfig {
         }
         if (equipment != null) {
             for (Item item : equipment.getItems()) {
-                if (item.getId() >= 0 && item.getQuantity() > 0) {
+                if (item.getId() >= 0 && item.getQuantity() > 0){
                     itemsAndQuantities.put(item.getId(), item.getQuantity());
                 }
             }
@@ -513,6 +513,10 @@ public class PathfinderConfig {
                 }
             }
         }
+        if (config.ignoreCoins()){
+            itemsAndQuantities.put(ItemID.COINS_995, 1000000);
+        }
+
         boolean usingStaff = false;
         boolean usingOffhand = false;
         TransportItems transportItems = transport.getItemRequirements();

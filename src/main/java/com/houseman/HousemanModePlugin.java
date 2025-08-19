@@ -254,11 +254,22 @@ public class HousemanModePlugin extends Plugin {
     private Future<?> pathfinderFuture;
     private final Object pathfinderMutex = new Object();
 
-    @Getter
     private Pathfinder pathfinder;
+    private Pathfinder cachedPathfinder;
+
+    public Pathfinder getPathfinder() {
+        if (pathfinder != null && pathfinder.isDone()){
+            return pathfinder;
+        }else{
+            return cachedPathfinder;
+        }
+    }
 
     @Provides
     HousemanModeConfig provideConfig(ConfigManager configManager) {
+        //configManager.setConfiguration(CONFIG_GROUP, "useTeleportationItems", TeleportationItem.INVENTORY_NON_CONSUMABLE);
+        //configManager.setConfiguration(CONFIG_GROUP, "showTileCounter", TileCounter.REMAINING);
+        //configManager.setConfiguration(CONFIG_GROUP, "pathStyle", TileStyle.TILES);
         return configManager.getConfig(HousemanModeConfig.class);
     }
 
@@ -403,9 +414,11 @@ public class HousemanModePlugin extends Plugin {
 
         if (gameObject.getId() == 4525) {
             inHouse = true;
-            remainingTiles = client.getTotalLevel() / 2;
-            identifyItems();
-            saveInfo();
+            if (remainingTiles >= 0 || !hasItemsToDrop()) {
+                remainingTiles = client.getTotalLevel() / 2;
+                identifyItems();
+                saveInfo();
+            }
         }
     }
 
@@ -504,11 +517,11 @@ public class HousemanModePlugin extends Plugin {
 
             @Override
             public void keyPressed(KeyEvent e) {
-                if (e.getKeyChar()=='r'){
+                /*if (e.getKeyChar()=='r'){
                     remainingTiles = config.overwriteSteps();
                     rangeIsDirty = true;
                     saveInfo();
-                }
+                }*/
             }
 
             @Override
@@ -548,8 +561,13 @@ public class HousemanModePlugin extends Plugin {
     public void restartPathfinding(int start, Set<Integer> ends, boolean canReviveFiltered) {
         synchronized (pathfinderMutex) {
             if (pathfinder != null) {
-                pathfinder.cancel();
-                pathfinderFuture.cancel(true);
+                if (pathfinderFuture.isDone())
+                {
+                    cachedPathfinder = pathfinder;
+                }else {
+                    pathfinder.cancel();
+                    pathfinderFuture.cancel(true);
+                }
             }
 
             if (pathfindingExecutor == null) {
@@ -635,6 +653,7 @@ public class HousemanModePlugin extends Plugin {
                 return 1;
             }
         }
+        log.warn("lastTile was null");
         return 1;
     }
 
@@ -651,6 +670,10 @@ public class HousemanModePlugin extends Plugin {
 
         MovementFlag[] northTile = getTileMovementFlags(LocalPoint.fromWorld(client, northPoint));
         MovementFlag[] southTile = getTileMovementFlags(LocalPoint.fromWorld(client, southPoint));
+
+        if (Math.abs(xDiff) > 2 || Math.abs(yDiff) > 2){
+            log.warn("Illegal xDiff {}, yDiff {}", xDiff, yDiff);
+        }
 
         if (xDiff + yDiff == 0) {
             // Diagonal tilts north west
@@ -1306,6 +1329,7 @@ public class HousemanModePlugin extends Plugin {
                     pathfinder.cancel();
                 }
                 pathfinder = null;
+                cachedPathfinder = null;
             }
 
             worldMapPointManager.removeIf(x -> x == marker);
@@ -1428,8 +1452,22 @@ public class HousemanModePlugin extends Plugin {
         final int id = event.getContainerId();
         if (id == InventoryID.INVENTORY.getId() && inHouse)
         {
-            identifyItems();
+            if (remainingTiles >= 0 || !hasItemsToDrop()) {
+                remainingTiles = client.getTotalLevel() / 2;
+                identifyItems();
+                saveInfo();
+            }
         }
     }
+
+    @Subscribe
+    public void onActorDeath(ActorDeath actorDeath) {
+        if (actorDeath.getActor() != client.getLocalPlayer())
+            return;
+
+        remainingTiles = -1;
+        saveInfo();
+    }
+
 
 }

@@ -59,7 +59,7 @@ class HouseInfoOverlay extends OverlayPanel {
 
     @Override
     public Dimension render(Graphics2D graphics) {
-        String unspentTiles = addCommasToNumber(plugin.getRemainingTiles());
+        String unspentTiles = plugin.getRemainingTiles() < 0 ? "-" : addCommasToNumber(plugin.getRemainingTiles());
 
         panelComponent.getChildren().add(LineComponent.builder()
                 .left(REMAINING_TILES)

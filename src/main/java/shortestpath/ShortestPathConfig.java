@@ -349,10 +349,21 @@ public interface ShortestPathConfig extends ChanceManConfig {
         return true;
     }
 
+    @ConfigItem(
+            keyName = "ignoreCoints",
+            name = "Ignore Coins",
+            description = "Show transports even when lacking the required coins",
+            position = 28,
+            section = sectionSettings
+    )
+    default boolean ignoreCoins() {
+        return false;
+    }
+
     @ConfigSection(
         name = "Display",
         description = "Options for displaying the path on the world map, minimap and scene tiles",
-        position = 28
+        position = 21
     )
     String sectionDisplay = "sectionDisplay";
 
@@ -360,7 +371,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
         keyName = "drawMap",
         name = "Draw path on world map",
         description = "Whether the path should be drawn on the world map",
-        position = 29,
+        position = 30,
         section = sectionDisplay
     )
     default boolean drawMap() {
@@ -371,7 +382,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
         keyName = "drawMinimap",
         name = "Draw path on minimap",
         description = "Whether the path should be drawn on the minimap",
-        position = 30,
+        position = 31,
         section = sectionDisplay
     )
     default boolean drawMinimap() {
@@ -382,7 +393,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
         keyName = "drawTiles",
         name = "Draw path on tiles",
         description = "Whether the path should be drawn on the game tiles",
-        position = 31,
+        position = 32,
         section = sectionDisplay
     )
     default boolean drawTiles() {
@@ -393,7 +404,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
         keyName = "pathStyle",
         name = "Path style",
         description = "Whether to display the path as tiles or a segmented line",
-        position = 32,
+        position = 33,
         section = sectionDisplay
     )
     default TileStyle pathStyle() {
@@ -403,7 +414,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
     @ConfigSection(
         name = "Colours",
         description = "Colours for the path map, minimap and scene tiles",
-        position = 33
+        position = 34
     )
     String sectionColours = "sectionColours";
 
@@ -412,7 +423,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
         keyName = "colourPath",
         name = "Path",
         description = "Colour of the path tiles on the world map, minimap and in the game scene",
-        position = 34,
+        position = 35,
         section = sectionColours
     )
     default Color colourPath() {
@@ -425,7 +436,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
         name = "Calculating",
         description = "Colour of the path tiles while the pathfinding calculation is in progress," +
             "<br>and the colour of unused targets if there are more than a single target",
-        position = 35,
+        position = 36,
         section = sectionColours
     )
     default Color colourPathCalculating() {
@@ -437,7 +448,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
         keyName = "colourTransports",
         name = "Transports",
         description = "Colour of the transport tiles",
-        position = 36,
+        position = 37,
         section = sectionColours
     )
     default Color colourTransports() {
@@ -449,7 +460,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
         keyName = "colourCollisionMap",
         name = "Collision map",
         description = "Colour of the collision map tiles",
-        position = 37,
+        position = 38,
         section = sectionColours
     )
     default Color colourCollisionMap() {
@@ -461,7 +472,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
         keyName = "colourText",
         name = "Text",
         description = "Colour of the text of the tile counter and fairy ring codes",
-        position = 38,
+        position = 39,
         section = sectionColours
     )
     default Color colourText() {
@@ -471,7 +482,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
     @ConfigSection(
         name = "Debug Options",
         description = "Various options for debugging",
-        position = 39,
+        position = 40,
         closedByDefault = true
     )
     String sectionDebug = "sectionDebug";
@@ -480,7 +491,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
         keyName = "drawTransports",
         name = "Draw transports",
         description = "Whether transports should be drawn",
-        position = 40,
+        position = 41,
         section = sectionDebug
     )
     default boolean drawTransports() {
@@ -491,7 +502,7 @@ public interface ShortestPathConfig extends ChanceManConfig {
         keyName = "drawCollisionMap",
         name = "Draw collision map",
         description = "Whether the collision map should be drawn",
-        position = 41,
+        position = 42,
         section = sectionDebug
     )
     default boolean drawCollisionMap() {
@@ -502,10 +513,11 @@ public interface ShortestPathConfig extends ChanceManConfig {
         keyName = "drawDebugPanel",
         name = "Show debug panel",
         description = "Toggles displaying the pathfinding debug stats panel",
-        position = 42,
+        position = 43,
         section = sectionDebug
     )
     default boolean drawDebugPanel() {
         return false;
     }
+
 }

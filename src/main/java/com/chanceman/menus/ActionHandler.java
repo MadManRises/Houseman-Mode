@@ -204,7 +204,7 @@ public class ActionHandler {
 		String target = Text.removeTags(entry.getTarget());
 
 		// Always allow "Drop"
-		if (option.equalsIgnoreCase("drop") || option.substring(0, 3).equalsIgnoreCase("buy") || option.equalsIgnoreCase("value"))
+		if (option.equalsIgnoreCase("drop") || (option.length() >= 3 && option.substring(0, 3).equalsIgnoreCase("buy")) || option.equalsIgnoreCase("value"))
 			return true;
 		if (option.equalsIgnoreCase("clean") || option.equalsIgnoreCase("rub"))
 		{
